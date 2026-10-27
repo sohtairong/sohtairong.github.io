@@ -1,0 +1,51 @@
+---
+// A single row of a trip's featured photos that scrolls on its own.
+// Even-numbered rows scroll left, odd-numbered rows scroll right.
+import PhotoCard from './PhotoCard.astro';
+import { dateLabel, featuredOf, type Trip } from '../lib/trips';
+
+interface Props { trip: Trip; reverse?: boolean }
+const { trip, reverse = false } = Astro.props;
+const photos = featuredOf(trip);
+const label = `${trip.data.country}, ${dateLabel(trip)}`;
+const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720px) 260px, 340px' };
+---
+<article class="trip" aria-labelledby={`h-${trip.id}`}>
+  <div class="wrap head">
+    <h2 id={`h-${trip.id}`} class="display">
+      <span class="label">{dateLabel(trip)} · {trip.data.photos.length} photos</span>
+      <span>{trip.data.country}</span>
+    </h2>
+    <a class="label see" href={`/places/${trip.id}/`}>See all<span class="sr-only"> photos from {label}</span> →</a>
+  </div>
+  <div class="marquee" role="region" aria-label={`Photos from ${label}`} tabindex="0">
+    <div class:list={['track', { rev: reverse }]}>
+      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} /></div>)}
+      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} hidden /></div>)}
+    </div>
+  </div>
+</article>
+
+<style>
+  .trip { padding-block: 56px 24px; border-top: 1px solid var(--rule); }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 32px; margin-bottom: 28px; }
+  h2 { display: grid; gap: 8px; font-size: clamp(30px, 3.4vw, 46px); line-height: 1; }
+  h2 .label { font-weight: 400; letter-spacing: 0.06em; }
+  .see { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; padding-block: 12px; }
+
+  .marquee { overflow: hidden; }
+  .marquee:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .track { display: flex; width: max-content; animation: slide-left var(--carousel-speed) linear infinite; }
+  .track.rev { animation-name: slide-right; }
+  .marquee:hover .track, .marquee:focus-within .track { animation-play-state: paused; }
+  .slide { flex: 0 0 auto; width: var(--slide-w); margin-right: var(--slide-gap); }
+
+  @keyframes slide-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes slide-right { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+  /* People who ask their device for less motion get a still row they can scroll. */
+  @media (prefers-reduced-motion: reduce) {
+    .track { animation: none; }
+    .marquee { overflow-x: auto; }
+  }
+</style>

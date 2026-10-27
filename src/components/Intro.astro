@@ -1,0 +1,48 @@
+---
+// Top of the home page: portrait, headline and the list of places.
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import PlaceIndex from './PlaceIndex.astro';
+import type { Trip } from '../lib/trips';
+
+interface Props { about: CollectionEntry<'about'>; trips: Trip[] }
+const { about, trips } = Astro.props;
+const { headline, intro, portrait, portraitCaption, name } = about.data;
+
+// "*word*" in the headline becomes muted italic emphasis.
+const headlineHtml = headline
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/\*(.+?)\*/g, '<em>$1</em>');
+---
+<section class="wrap intro">
+  <div class="lead">
+    <figure class="portrait">
+      {portrait
+        ? <Image src={portrait} alt={`Portrait of ${name}`} widths={[400, 640, 900]} sizes="(min-width: 1100px) 320px, (min-width: 720px) 40vw, 100vw" loading="eager" />
+        : <div class="ph label">Photo of you</div>}
+      {portraitCaption && <figcaption class="label">{portraitCaption}</figcaption>}
+    </figure>
+    <div class="text">
+      <h1 class="display" set:html={headlineHtml} />
+      <p class="muted">{intro}</p>
+    </div>
+  </div>
+  <PlaceIndex trips={trips} />
+</section>
+
+<style>
+  .intro {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 48px; align-items: start; padding-block: 8px 64px;
+  }
+  .lead { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px 32px; align-items: start; }
+  .portrait { margin: 0; display: grid; gap: 10px; }
+  .portrait :global(img), .ph { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--placeholder); }
+  .ph { display: grid; place-items: center; color: #555; }
+  figcaption { text-transform: none; letter-spacing: 0; }
+  .text { display: grid; gap: 16px; }
+  h1 { font-size: clamp(32px, 3.4vw, 46px); line-height: 1.02; text-wrap: balance; }
+  h1 :global(em) { color: var(--ink-muted); }
+  .text p { margin: 0; max-width: 36ch; font-size: 16px; }
+  @media (max-width: 720px) { .intro { grid-template-columns: minmax(0, 1fr); } }
+</style>

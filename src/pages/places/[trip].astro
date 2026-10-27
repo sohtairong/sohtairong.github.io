@@ -1,0 +1,24 @@
+---
+// One page per trip folder, generated automatically at build time.
+import Base from '../../layouts/Base.astro';
+import TripHero from '../../components/TripHero.astro';
+import PhotoLayout from '../../components/PhotoLayout.astro';
+import TripNav from '../../components/TripNav.astro';
+import { dateLabel, getTrips, type Trip } from '../../lib/trips';
+
+export async function getStaticPaths() {
+  const trips = await getTrips();
+  return trips.map((trip, index) => ({
+    params: { trip: trip.id },
+    props: { trip, index, total: trips.length, next: trips[(index + 1) % trips.length] },
+  }));
+}
+
+interface Props { trip: Trip; index: number; total: number; next: Trip }
+const { trip, index, total, next } = Astro.props;
+---
+<Base title={`${trip.data.country}, ${dateLabel(trip)}`} description={`Photographs from ${trip.data.country}, ${dateLabel(trip)}.`}>
+  <TripHero trip={trip} index={index} total={total} />
+  <PhotoLayout trip={trip} />
+  <TripNav next={total > 1 ? next : undefined} />
+</Base>

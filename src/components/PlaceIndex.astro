@@ -1,0 +1,32 @@
+---
+import { dateLabel, type Trip } from '../lib/trips';
+interface Props { trips: Trip[] }
+const { trips } = Astro.props;
+---
+<nav id="places" aria-labelledby="places-label">
+  <h2 id="places-label" class="label">Places</h2>
+  <ol>
+    {trips.map((t) => (
+      <li>
+        <a href={`/places/${t.id}/`}>
+          <span class="name">{t.data.country}</span>
+          <span class="label">{dateLabel(t)}</span>
+          <span class="label count">{t.data.photos.length} photos</span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  h2 { margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-weight: 400; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li { border-bottom: 1px solid var(--rule); }
+  a {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 16px; align-items: baseline;
+    padding-block: 12px; min-height: 44px; text-decoration: none;
+  }
+  .name { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; font-size: 20px; line-height: 1.2; }
+  a .label { text-transform: none; letter-spacing: 0; }
+  .count { min-width: 64px; text-align: right; }
+</style>

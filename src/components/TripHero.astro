@@ -1,0 +1,32 @@
+---
+import { render } from 'astro:content';
+import { dateLabel, type Trip } from '../lib/trips';
+interface Props { trip: Trip; index: number; total: number }
+const { trip, index, total } = Astro.props;
+const { Content } = await render(trip);
+const n = (x: number) => String(x).padStart(2, '0');
+---
+<section class="wrap hero">
+  <div class="title">
+    <span class="label">Place {n(index + 1)} of {n(total)} · {trip.data.photos.length} photos</span>
+    <h1 class="display">{trip.data.country},<br /><span class="muted">{dateLabel(trip)}</span></h1>
+  </div>
+  <div class="text">
+    {trip.data.cities.length > 0 && <span class="cities">{trip.data.cities.join(' · ')}</span>}
+    <div class="body"><Content /></div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 32px 64px; align-items: end; padding-block: 48px 56px;
+  }
+  .title { display: grid; gap: 12px; }
+  h1 { font-size: clamp(44px, 5.6vw, 80px); line-height: 0.98; }
+  .text { display: grid; gap: 12px; }
+  .cities { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+  .body :global(p) { margin: 0 0 1em; max-width: 48ch; font-size: 18px; }
+  .body :global(p:last-child) { margin-bottom: 0; }
+  @media (max-width: 720px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+</style>

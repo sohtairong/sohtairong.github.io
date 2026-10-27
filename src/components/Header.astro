@@ -1,0 +1,25 @@
+---
+interface Props { name: string; instagram?: string }
+const { name, instagram } = Astro.props;
+---
+<header class="wrap header" id="top">
+  <a href="/" class="logo">{name}</a>
+  <nav aria-label="Primary">
+    <a href="/#places">Places</a>
+    <a href="/#about">About</a>
+    {instagram && <a href={instagram} rel="me">Instagram</a>}
+  </nav>
+</header>
+
+<style>
+  .header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
+    gap: 16px; padding-block: 28px;
+  }
+  .logo {
+    font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em;
+    font-size: 20px; line-height: 1; text-decoration: none;
+  }
+  nav { display: flex; flex-wrap: wrap; gap: 28px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+  nav a { text-decoration: none; }
+</style>

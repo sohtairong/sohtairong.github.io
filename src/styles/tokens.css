@@ -1,0 +1,28 @@
+/* Design tokens — change a value here and it updates everywhere. */
+:root {
+  /* Colour */
+  --bg: #ffffff;
+  --ink: #111111;
+  --ink-body: #444444;
+  --ink-muted: #6e6e6e; /* 5.1:1 on white */
+  --rule: #e6e6e6;
+  --placeholder: #d3d6d8;
+
+  /* Type */
+  --font-display: 'Inter Tight', system-ui, sans-serif;
+  --font-body: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* Layout */
+  --page-max: 1320px;
+  --gutter: 40px;
+  --slide-w: 340px;
+  --slide-gap: 32px;
+  --carousel-speed: 70s; /* time for one full loop; lower = faster */
+
+  color-scheme: light;
+}
+
+@media (max-width: 720px) {
+  :root { --gutter: 16px; --slide-w: 260px; --slide-gap: 20px; }
+}

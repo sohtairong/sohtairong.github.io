@@ -1,0 +1,17 @@
+---
+import { getEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Intro from '../components/Intro.astro';
+import TripCarousel from '../components/TripCarousel.astro';
+import About from '../components/About.astro';
+import { getTrips } from '../lib/trips';
+
+const about = await getEntry('about', 'about');
+if (!about) throw new Error('src/content/about.md is missing');
+const trips = await getTrips();
+---
+<Base>
+  <Intro about={about} trips={trips} />
+  {trips.map((trip, i) => <TripCarousel trip={trip} reverse={i % 2 === 1} />)}
+  <About about={about} />
+</Base>

@@ -1,0 +1,24 @@
+---
+import { dateLabel, type Trip } from '../lib/trips';
+interface Props { next?: Trip }
+const { next } = Astro.props;
+---
+<nav class="wrap" aria-label="More places"><div class="tripnav">
+  <a href="/#places">
+    <span class="label">← All places</span>
+    <span class="big">Back to the index</span>
+  </a>
+  {next && (
+    <a href={`/places/${next.id}/`} class="next">
+      <span class="label">Next place →</span>
+      <span class="big">{next.data.country}, <span class="muted">{dateLabel(next)}</span></span>
+    </a>
+  )}
+</div></nav>
+
+<style>
+  .tripnav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; padding-block: 32px 24px; border-top: 1px solid var(--ink); }
+  a { display: grid; gap: 4px; min-height: 44px; text-decoration: none; }
+  .next { text-align: right; }
+  .big { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; font-size: 24px; line-height: 1.15; }
+</style>

@@ -1,0 +1,36 @@
+---
+// The short "off camera" section: bio, current roles and links.
+import { render, type CollectionEntry } from 'astro:content';
+interface Props { about: CollectionEntry<'about'> }
+const { about } = Astro.props;
+const { Content } = await render(about);
+const { roles, links, email } = about.data;
+---
+<section id="about" class="wrap"><div class="about">
+  <h2 class="display">About</h2>
+  <div class="bio"><Content /></div>
+  <div class="side">
+    {roles.length > 0 && (
+      <ul class="roles">
+        {roles.map((r) => <li>{r.role}<span class="muted">, {r.org}</span></li>)}
+      </ul>
+    )}
+    <ul class="links">
+      {links.map((l) => <li><a href={l.url} rel="me">{l.label} →</a></li>)}
+      {email && <li class="muted">{email}</li>}
+    </ul>
+  </div>
+</div></section>
+
+<style>
+  .about {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 32px;
+    margin-top: 48px; padding-block: 48px; border-top: 1px solid var(--ink);
+  }
+  h2 { font-size: 28px; line-height: 1.1; }
+  .bio :global(p) { margin: 0 0 1em; max-width: 46ch; font-size: 17px; }
+  .side { display: grid; gap: 20px; align-content: start; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .roles { font-size: 15px; }
+  .links { font-family: var(--font-mono); font-size: 13px; }
+</style>
