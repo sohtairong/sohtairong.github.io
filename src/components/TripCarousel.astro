@@ -8,9 +8,10 @@ interface Props { trip: Trip; reverse?: boolean }
 const { trip, reverse = false } = Astro.props;
 const photos = featuredOf(trip);
 const label = `${trip.data.country}, ${dateLabel(trip)}`;
+const href = (p: { index: number }) => `/places/${trip.id}/#p-${p.index}`;
 const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720px) 260px, 340px' };
 ---
-<article class="trip" aria-labelledby={`h-${trip.id}`}>
+<article class="trip" aria-labelledby={`h-${trip.id}`} data-reveal>
   <div class="wrap head">
     <h2 id={`h-${trip.id}`} class="display">
       <span class="label">{dateLabel(trip)} · {trip.data.photos.length} photos</span>
@@ -20,8 +21,8 @@ const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720
   </div>
   <div class="marquee" role="region" aria-label={`Photos from ${label}`} tabindex="0">
     <div class:list={['track', { rev: reverse }]}>
-      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} /></div>)}
-      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} hidden /></div>)}
+      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} href={href(p)} /></div>)}
+      {photos.map((p) => <div class="slide"><PhotoCard photo={p} {...card} href={href(p)} hidden /></div>)}
     </div>
   </div>
 </article>

@@ -1,0 +1,186 @@
+---
+// Full-screen photo viewer for trip pages.
+// Opens when a photo is clicked. Arrow keys, the on-screen arrows or a swipe move
+// through the trip; Esc, the Close button or a click outside the photo closes it.
+---
+<dialog class="lb" aria-label="Photo viewer">
+  <div class="lb-top">
+    <span class="lb-count" aria-live="polite"></span>
+    <button class="lb-btn lb-close" type="button">Close ✕</button>
+  </div>
+  <figure class="lb-stage">
+    <div class="lb-frame"><img class="lb-img" alt="" /></div>
+    <figcaption class="lb-cap">
+      <span class="lb-title"></span>
+      <span class="lb-story"></span>
+      <span class="lb-city"></span>
+    </figcaption>
+  </figure>
+  <div class="lb-nav">
+    <button class="lb-btn lb-prev" type="button" aria-label="Previous photo">← Prev</button>
+    <button class="lb-btn lb-next" type="button" aria-label="Next photo">Next →</button>
+  </div>
+</dialog>
+
+<style>
+  .lb {
+    /* The viewer is always dark, whatever the page theme. */
+    --lb-bg: #0e0e0d; --lb-ink: #f4f4f2; --lb-muted: #a9a9a4;
+    width: 100vw; height: 100dvh; max-width: none; max-height: none;
+    margin: 0; padding: 16px clamp(16px, 3vw, 40px); border: 0;
+    background: var(--lb-bg); color: var(--lb-ink);
+    grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px;
+  }
+  .lb[open] { display: grid; }
+  .lb::backdrop { background: var(--lb-bg); }
+  @media (prefers-reduced-motion: no-preference) {
+    .lb[open] { animation: lb-in 0.25s ease; }
+    .lb-img { transition: opacity 0.25s ease; }
+  }
+  @keyframes lb-in { from { opacity: 0; } }
+
+  .lb-top, .lb-nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .lb-count { font-family: var(--font-mono); font-size: 12px; color: var(--lb-muted); font-variant-numeric: tabular-nums; }
+  .lb-btn {
+    min-height: 44px; padding: 0 12px; border: 0; background: none; cursor: pointer;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lb-ink);
+  }
+  .lb-btn:hover { color: var(--lb-muted); }
+  .lb-btn:focus-visible { outline: 2px solid var(--lb-ink); outline-offset: 2px; }
+  .lb-btn:disabled { color: #5c5c58; cursor: default; }
+  .lb-close { margin-right: -12px; }
+  .lb-prev { margin-left: -12px; }
+  .lb-next { margin-right: -12px; }
+
+  .lb-stage {
+    margin: 0; min-height: 0;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); grid-template-rows: minmax(0, 1fr); gap: clamp(20px, 3vw, 48px); align-items: end;
+  }
+  .lb-frame { min-width: 0; min-height: 0; height: 100%; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; }
+  .lb-img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+  .lb-img.loading { opacity: 0.35; }
+  .lb-cap { display: grid; gap: 8px; padding-bottom: 4px; }
+  .lb-title { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; font-size: 24px; line-height: 1.15; }
+  .lb-story { font-size: 15px; line-height: 1.5; color: var(--lb-ink); }
+  .lb-city { font-family: var(--font-mono); font-size: 12px; color: var(--lb-muted); }
+  .lb-title:empty, .lb-story:empty, .lb-city:empty { display: none; }
+
+  @media (max-width: 800px) {
+    .lb-stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-items: stretch; gap: 16px; }
+    .lb-title { font-size: 20px; }
+  }
+</style>
+
+<script>
+  // Uses event delegation, so it keeps working after page transitions.
+  const MORPH = 'photo-morph';
+  let index = 0;
+  let opened = 0;
+  let touchX: number | null = null;
+
+  const thumbs = () => [...document.querySelectorAll<HTMLButtonElement>('button[data-lb]')];
+  const dialog = () => document.querySelector<HTMLDialogElement>('dialog.lb');
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  function show(i: number) {
+    const dlg = dialog();
+    const list = thumbs();
+    if (!dlg || !list.length) return;
+    index = Math.max(0, Math.min(list.length - 1, i));
+    const thumb = list[index];
+    const small = thumb.querySelector('img');
+    const img = dlg.querySelector<HTMLImageElement>('.lb-img')!;
+    const full = thumb.dataset.full!;
+
+    // Show the small version at once, then swap in the large one when it has loaded.
+    img.alt = small?.alt ?? '';
+    img.classList.add('loading');
+    if (small) { img.width = small.naturalWidth || small.width; img.height = small.naturalHeight || small.height; }
+    img.src = small?.currentSrc || full;
+    const big = new Image();
+    big.onload = () => {
+      if (list[index] !== thumb) return; // moved on already
+      img.width = big.naturalWidth; img.height = big.naturalHeight;
+      img.src = full;
+      img.classList.remove('loading');
+    };
+    big.src = full;
+
+    dlg.querySelector('.lb-title')!.textContent = thumb.dataset.title ?? '';
+    dlg.querySelector('.lb-story')!.textContent = thumb.dataset.story ?? '';
+    dlg.querySelector('.lb-city')!.textContent = thumb.dataset.city ?? '';
+    dlg.querySelector('.lb-count')!.textContent = `${pad(index + 1)} / ${pad(list.length)}`;
+    dlg.querySelector<HTMLButtonElement>('.lb-prev')!.disabled = index === 0;
+    dlg.querySelector<HTMLButtonElement>('.lb-next')!.disabled = index === list.length - 1;
+
+    // Warm up the neighbours so moving on feels instant.
+    for (const n of [list[index + 1], list[index - 1]]) if (n?.dataset.full) new Image().src = n.dataset.full;
+  }
+
+  function open(i: number) {
+    const dlg = dialog();
+    const thumbImg = thumbs()[i]?.querySelector<HTMLElement>('img');
+    if (!dlg) return;
+    opened = i;
+    const reveal = () => { show(i); dlg.showModal(); };
+
+    // Grow the clicked photo into the viewer where the browser supports it.
+    const start = (document as any).startViewTransition?.bind(document);
+    if (!start || reducedMotion() || !thumbImg) return reveal();
+    const big = dlg.querySelector<HTMLElement>('.lb-img')!;
+    thumbImg.style.viewTransitionName = MORPH;
+    const t = start(() => {
+      thumbImg.style.viewTransitionName = '';
+      big.style.viewTransitionName = MORPH;
+      reveal();
+    });
+    t.finished.finally(() => { big.style.viewTransitionName = ''; });
+  }
+
+  function close() {
+    const dlg = dialog();
+    if (!dlg?.open) return;
+    dlg.close();
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target as Element | null;
+    if (!el) return;
+    const thumb = el.closest<HTMLButtonElement>('button[data-lb]');
+    if (thumb) return open(thumbs().indexOf(thumb));
+    const dlg = el.closest('dialog.lb');
+    if (!dlg) return;
+    if (el.closest('.lb-close')) return close();
+    if (el.closest('.lb-prev')) return show(index - 1);
+    if (el.closest('.lb-next')) return show(index + 1);
+    // A click on the dark area around the photo closes the viewer.
+    if (!el.closest('.lb-img, .lb-cap, .lb-btn')) close();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!dialog()?.open) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); show(index + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(index - 1); }
+  });
+
+  // Swipe left / right on touch screens.
+  document.addEventListener('touchstart', (e) => {
+    touchX = dialog()?.open ? e.touches[0].clientX : null;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    touchX = null;
+    if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  // When the viewer closes, bring the page to the photo you ended on.
+  document.addEventListener('close', (e) => {
+    if (!(e.target instanceof HTMLDialogElement) || !e.target.classList.contains('lb')) return;
+    if (index === opened) return;
+    const thumb = thumbs()[index];
+    thumb?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    thumb?.focus({ preventScroll: true });
+  }, true);
+</script>

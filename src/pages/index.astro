@@ -4,14 +4,17 @@ import Base from '../layouts/Base.astro';
 import Intro from '../components/Intro.astro';
 import TripCarousel from '../components/TripCarousel.astro';
 import About from '../components/About.astro';
+import PlacesMap from '../components/PlacesMap.astro';
+import { placesFor } from '../lib/places';
 import { getTrips } from '../lib/trips';
 
 const about = await getEntry('about', 'about');
 if (!about) throw new Error('src/content/about.md is missing');
 const trips = await getTrips();
 ---
-<Base>
+<Base header={false}>
   <Intro about={about} trips={trips} />
+  <PlacesMap places={placesFor(trips, about)} />
   {trips.map((trip, i) => <TripCarousel trip={trip} reverse={i % 2 === 1} />)}
   <About about={about} />
 </Base>

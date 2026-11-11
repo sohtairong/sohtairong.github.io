@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Tab icon: "TR" in plain type. Flips colours when the browser is in dark mode. -->
+  <style>
+    .bg { fill: #121211; } .fg { fill: #f2f1ed; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #f2f1ed; } .fg { fill: #121211; } }
+  </style>
+  <rect class="bg" width="64" height="64" rx="12"/>
+  <text class="fg" x="32" y="43" text-anchor="middle" font-family="'Inter Tight', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="-1.5">TR</text>
+</svg>

@@ -7,6 +7,7 @@
   --ink-muted: #6e6e6e; /* 5.1:1 on white */
   --rule: #e6e6e6;
   --placeholder: #d3d6d8;
+  --placeholder-ink: #555555;
 
   /* Type */
   --font-display: 'Inter Tight', system-ui, sans-serif;
@@ -21,6 +22,31 @@
   --carousel-speed: 70s; /* time for one full loop; lower = faster */
 
   color-scheme: light;
+}
+
+/* Dark mode. Neutral and slightly warm, with no accent colour, so the photos carry all the colour.
+   Used when the visitor's device is in dark mode, or when they pick it with the toggle in the menu. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #121211;          /* warm near-black, like a darkroom wall */
+    --ink: #f2f1ed;         /* soft paper white: 16.6:1 on the background */
+    --ink-body: #cfcec8;    /* 11.9:1 */
+    --ink-muted: #a2a19a;   /* 7.2:1 */
+    --rule: #2c2c29;
+    --placeholder: #2a2a27;
+    --placeholder-ink: #a2a19a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #121211;          /* warm near-black, like a darkroom wall */
+  --ink: #f2f1ed;         /* soft paper white: 16.6:1 on the background */
+  --ink-body: #cfcec8;    /* 11.9:1 */
+  --ink-muted: #a2a19a;   /* 7.2:1 */
+  --rule: #2c2c29;
+  --placeholder: #2a2a27;
+  --placeholder-ink: #a2a19a;
+  color-scheme: dark;
 }
 
 @media (max-width: 720px) {

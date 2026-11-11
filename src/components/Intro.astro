@@ -1,48 +1,114 @@
 ---
-// Top of the home page: portrait, headline and the list of places.
+// Top of the home page: a full-width travel photo with the menu, portrait,
+// headline and list of places laid over it.
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
-import PlaceIndex from './PlaceIndex.astro';
-import type { Trip } from '../lib/trips';
+import Header from './Header.astro';
+import { dateLabel, featuredOf, type Trip } from '../lib/trips';
 
 interface Props { about: CollectionEntry<'about'>; trips: Trip[] }
 const { about, trips } = Astro.props;
-const { headline, intro, portrait, portraitCaption, name } = about.data;
+const { headline, intro, portrait, portraitCaption, name, instagram } = about.data;
+
+// The hero photo: the one set in about.md, otherwise the newest trip's first featured photo.
+const newest = trips[0];
+const fallback = newest ? featuredOf(newest)[0] : undefined;
+const hero = about.data.hero ?? fallback?.src;
+const heroCaption = about.data.heroCaption
+  ?? (about.data.hero ? undefined : fallback && newest ? [fallback.city || newest.data.country, dateLabel(newest)].join(', ') : undefined);
 
 // "*word*" in the headline becomes muted italic emphasis.
 const headlineHtml = headline
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/\*(.+?)\*/g, '<em>$1</em>');
 ---
-<section class="wrap intro">
-  <div class="lead">
-    <figure class="portrait">
-      {portrait
-        ? <Image src={portrait} alt={`Portrait of ${name}`} widths={[400, 640, 900]} sizes="(min-width: 1100px) 320px, (min-width: 720px) 40vw, 100vw" loading="eager" />
-        : <div class="ph label">Photo of you</div>}
-      {portraitCaption && <figcaption class="label">{portraitCaption}</figcaption>}
-    </figure>
-    <div class="text">
-      <h1 class="display" set:html={headlineHtml} />
-      <p class="muted">{intro}</p>
+<section class:list={['hero', { 'has-photo': hero }]}>
+  {hero && (
+    <Image class="bg" src={hero} alt={heroCaption ? `Photograph: ${heroCaption}` : ''}
+      widths={[960, 1600, 2400, 3000]} sizes="100vw" loading="eager" fetchpriority="high" />
+  )}
+  <div class="scrim" aria-hidden="true"></div>
+
+  <Header name={name} instagram={instagram} />
+
+  <div class="wrap intro">
+    <div class="lead">
+      <figure class="portrait">
+        {portrait
+          ? <Image src={portrait} alt={`Portrait of ${name}`} widths={[400, 640, 900]} sizes="(min-width: 1100px) 320px, (min-width: 720px) 40vw, 100vw" loading="eager" />
+          : <div class="ph label">Photo of you</div>}
+        {portraitCaption && <figcaption class="label">{portraitCaption}</figcaption>}
+      </figure>
+      <div class="text">
+        <h1 class="display" set:html={headlineHtml} />
+        <p>{intro}</p>
+      </div>
     </div>
   </div>
-  <PlaceIndex trips={trips} />
+
+  {hero && heroCaption && <p class="wrap credit label">↳ {heroCaption}</p>}
 </section>
 
 <style>
-  .intro {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 48px; align-items: start; padding-block: 8px 64px;
+  .hero {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    /* Sized by its content: enough top space to show the photo, no full-screen gap. */
   }
-  .lead { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px 32px; align-items: start; }
+  /* Grid items with auto side margins shrink to fit; keep each row full width. */
+  .hero > :global(*:not(.bg):not(.scrim)) { width: 100%; }
+  /* Over a photo, every colour token inside the hero flips to light. */
+  .hero.has-photo {
+    --ink: #ffffff;
+    --ink-body: #ffffff;
+    --ink-muted: rgba(255, 255, 255, 0.8);
+    --rule: rgba(255, 255, 255, 0.32);
+    color: var(--ink);
+    background: #2a2a28;
+    text-shadow: 0 1px 14px rgba(0, 0, 0, 0.3);
+  }
+  .bg {
+    position: absolute; inset: 0; z-index: -2;
+    width: 100%; height: 100%; max-width: none; object-fit: cover;
+  }
+  /* The photo drifts slowly as you scroll away (only in browsers that support it, and not with reduced motion). */
+  .hero { overflow: clip; }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: scroll()) {
+      .bg { animation: hero-drift linear both; animation-timeline: scroll(root block); animation-range: 0 900px; }
+    }
+  }
+  @keyframes hero-drift { to { transform: translateY(10%) scale(1.06); } }
+  /* Darkens the photo where text sits so it stays readable on any image. */
+  .has-photo .scrim {
+    position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(180deg,
+      rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.18) 22%,
+      rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.72) 100%);
+  }
+
+  .intro {
+    align-self: end;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 48px; align-items: start; padding-block: clamp(96px, 16vh, 180px) 32px;
+  }
+  .lead { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 24px 40px; align-items: end; max-width: 860px; }
   .portrait { margin: 0; display: grid; gap: 10px; }
   .portrait :global(img), .ph { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--placeholder); }
-  .ph { display: grid; place-items: center; color: #555; }
+  .has-photo .portrait :global(img), .has-photo .ph { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+  .ph { display: grid; place-items: center; color: var(--placeholder-ink); text-shadow: none; }
   figcaption { text-transform: none; letter-spacing: 0; }
   .text { display: grid; gap: 16px; }
-  h1 { font-size: clamp(32px, 3.4vw, 46px); line-height: 1.02; text-wrap: balance; }
+  h1 { font-size: clamp(36px, 4.6vw, 64px); line-height: 1; text-wrap: balance; }
   h1 :global(em) { color: var(--ink-muted); }
-  .text p { margin: 0; max-width: 36ch; font-size: 16px; }
-  @media (max-width: 720px) { .intro { grid-template-columns: minmax(0, 1fr); } }
+  .text p { margin: 0; max-width: 40ch; font-size: 17px; color: var(--ink-muted); }
+  .credit { margin-block: 0; padding-bottom: 20px; text-align: right; text-transform: none; letter-spacing: 0; }
+
+  @media (max-width: 720px) {
+    .intro { grid-template-columns: minmax(0, 1fr); padding-top: 72px; }
+    .lead { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .portrait { max-width: 220px; }
+  }
 </style>

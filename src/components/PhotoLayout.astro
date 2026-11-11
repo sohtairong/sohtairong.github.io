@@ -9,12 +9,12 @@ const rows = rowsOf(Astro.props.trip);
 <div class="wrap rows">
   {rows.map((row, i) =>
     row.length === 1 ? (
-      <PhotoCard photo={row[0]} size="lg" showCity eager={i === 0}
+      <PhotoCard photo={row[0]} size="lg" showCity eager={i === 0} zoom anchor reveal
         widths={[640, 960, 1600, 2400]} sizes="(min-width: 1320px) 1240px, calc(100vw - 32px)" />
     ) : (
-      <div class="pair">
+      <div class="pair" data-reveal>
         {row.map((p) => (
-          <PhotoCard photo={p} size="md" showCity
+          <PhotoCard photo={p} size="md" showCity zoom anchor
             widths={[480, 800, 1200]} sizes="(min-width: 1320px) 610px, (min-width: 720px) 50vw, calc(100vw - 32px)" />
         ))}
       </div>

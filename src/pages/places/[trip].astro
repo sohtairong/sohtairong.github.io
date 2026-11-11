@@ -4,7 +4,8 @@ import Base from '../../layouts/Base.astro';
 import TripHero from '../../components/TripHero.astro';
 import PhotoLayout from '../../components/PhotoLayout.astro';
 import TripNav from '../../components/TripNav.astro';
-import { dateLabel, getTrips, type Trip } from '../../lib/trips';
+import Lightbox from '../../components/Lightbox.astro';
+import { dateLabel, featuredOf, getTrips, type Trip } from '../../lib/trips';
 
 export async function getStaticPaths() {
   const trips = await getTrips();
@@ -17,8 +18,13 @@ export async function getStaticPaths() {
 interface Props { trip: Trip; index: number; total: number; next: Trip }
 const { trip, index, total, next } = Astro.props;
 ---
-<Base title={`${trip.data.country}, ${dateLabel(trip)}`} description={`Photographs from ${trip.data.country}, ${dateLabel(trip)}.`}>
+<Base
+  title={`${trip.data.country}, ${dateLabel(trip)}`}
+  description={`${trip.data.photos.length} photographs from ${trip.data.country}, ${dateLabel(trip)}, with the stories behind them.`}
+  image={featuredOf(trip)[0]?.src}
+>
   <TripHero trip={trip} index={index} total={total} />
   <PhotoLayout trip={trip} />
   <TripNav next={total > 1 ? next : undefined} />
+  <Lightbox />
 </Base>

@@ -1,6 +1,6 @@
 ---
 // One photo with its title and story. Used in carousels and on trip pages.
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import type { Photo } from '../lib/trips';
 
 interface Props {
@@ -13,11 +13,47 @@ interface Props {
   size?: 'sm' | 'md' | 'lg';
   hidden?: boolean;
   eager?: boolean;
+  /** Makes the photo a link (carousel → the same photo on its trip page). */
+  href?: string;
+  /** Makes the photo open in the full-screen viewer (trip page). */
+  zoom?: boolean;
+  /** Gives the photo an address (#p-3) so links can land on it. */
+  anchor?: boolean;
+  /** Fades in when scrolled into view. */
+  reveal?: boolean;
 }
-const { photo, fit = 'natural', sizes, widths, showCity = false, size = 'sm', hidden = false, eager = false } = Astro.props;
+const {
+  photo, fit = 'natural', sizes, widths, showCity = false, size = 'sm',
+  hidden = false, eager = false, href, zoom = false, anchor = false, reveal = false,
+} = Astro.props;
+
+// The large version shown in the full-screen viewer.
+const full = zoom
+  ? await getImage({ src: photo.src, width: Math.min(2400, photo.src.width), format: 'webp' })
+  : undefined;
 ---
-<figure class:list={['card', size, fit, { tall: photo.src.height > photo.src.width }]} aria-hidden={hidden ? 'true' : undefined}>
-  <Image src={photo.src} alt={hidden ? '' : photo.alt} widths={widths} sizes={sizes} loading={eager ? 'eager' : 'lazy'} />
+<figure
+  class:list={['card', size, fit, { tall: photo.src.height > photo.src.width }]}
+  id={anchor ? `p-${photo.index}` : undefined}
+  aria-hidden={hidden ? 'true' : undefined}
+  data-reveal={reveal ? '' : undefined}
+>
+  {href ? (
+    <a class="media" href={href} data-morph tabindex={hidden ? -1 : undefined}>
+      <Image src={photo.src} alt={hidden ? '' : photo.alt} widths={widths} sizes={sizes} loading={eager ? 'eager' : 'lazy'} />
+    </a>
+  ) : zoom && full ? (
+    <button
+      class="media" type="button" data-lb
+      data-full={full.src}
+      data-title={photo.title} data-story={photo.story} data-city={photo.city ?? ''}
+      aria-label={`View larger: ${photo.alt}`}
+    >
+      <Image src={photo.src} alt={photo.alt} widths={widths} sizes={sizes} loading={eager ? 'eager' : 'lazy'} />
+    </button>
+  ) : (
+    <Image src={photo.src} alt={hidden ? '' : photo.alt} widths={widths} sizes={sizes} loading={eager ? 'eager' : 'lazy'} />
+  )}
   {(photo.title || photo.story) && (
     <figcaption>
       {photo.title && <span class="photo-title">{photo.title}</span>}
@@ -32,10 +68,20 @@ const { photo, fit = 'natural', sizes, widths, showCity = false, size = 'sm', hi
 </figure>
 
 <style>
-  .card { margin: 0; display: grid; gap: 10px; align-content: start; }
+  .card { margin: 0; display: grid; gap: 10px; align-content: start; scroll-margin-top: 24px; }
   .card :global(img) { width: 100%; height: auto; background: var(--placeholder); }
   .lg.tall :global(img) { width: auto; max-width: 100%; max-height: min(88vh, 1100px); }
   .crop :global(img) { aspect-ratio: 4 / 3; object-fit: cover; }
+
+  .media { display: block; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; overflow: hidden; }
+  .lg.tall .media { justify-self: start; }
+  button.media { cursor: zoom-in; }
+  /* A slow, small zoom on hover hints that the photo opens. */
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .media :global(img) { transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .media:hover :global(img) { transform: scale(1.025); }
+  }
+
   figcaption { display: grid; gap: 2px; }
   .sm .photo-title { font-size: 17px; line-height: 1.3; }
   .md .photo-title { font-size: 18px; line-height: 1.25; }

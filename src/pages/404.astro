@@ -1,0 +1,31 @@
+---
+// Shown when someone opens an address that doesn't exist.
+import Base from '../layouts/Base.astro';
+import PlaceIndex from '../components/PlaceIndex.astro';
+import { getTrips } from '../lib/trips';
+const trips = await getTrips();
+---
+<Base title="Page not found" description="This page doesn't exist.">
+  <section class="wrap lost">
+    <div class="text">
+      <p class="label">404 · Page not found</p>
+      <h1 class="display">This page wandered <span class="muted">off the map.</span></h1>
+      <p class="body">The address may be mistyped, or the page may have moved. Pick a place to carry on, or go back to the start.</p>
+      <a class="home" href="/">← Back to the home page</a>
+    </div>
+    <PlaceIndex trips={trips} />
+  </section>
+</Base>
+
+<style>
+  .lost {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 48px 64px; align-items: start; padding-block: 64px 96px;
+  }
+  .text { display: grid; gap: 16px; justify-items: start; }
+  .label { margin: 0; }
+  h1 { font-size: clamp(36px, 4.4vw, 60px); line-height: 1; text-wrap: balance; }
+  .body { margin: 0; max-width: 40ch; font-size: 17px; color: var(--ink-body); }
+  .home { padding-block: 12px; text-underline-offset: 4px; }
+  @media (max-width: 720px) { .lost { grid-template-columns: minmax(0, 1fr); } }
+</style>

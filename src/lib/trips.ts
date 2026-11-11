@@ -2,7 +2,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 export type Trip = CollectionEntry<'trips'>;
-export type Photo = Trip['data']['photos'][number] & { alt: string };
+export type Photo = Trip['data']['photos'][number] & { alt: string; /** position in the trip, used for #p-<n> links */ index: number };
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December'];
@@ -15,8 +15,9 @@ export function dateLabel(trip: Trip): string {
 }
 
 export function photosOf(trip: Trip): Photo[] {
-  return trip.data.photos.map((p) => ({
+  return trip.data.photos.map((p, index) => ({
     ...p,
+    index,
     alt: p.alt || [p.title, p.city ?? trip.data.country].filter(Boolean).join(', ') || `Photo from ${trip.data.country}`,
   }));
 }

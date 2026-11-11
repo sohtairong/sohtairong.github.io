@@ -1,0 +1,187 @@
+---
+// The atlas: a world map and the list of places, side by side. It is the site's main way in.
+// Solid dot = photos are up (click to open the trip). Ring = visited, photos coming.
+// Pointing at a place in the list lights up its dot (and the other way round), and
+// places with photos show a small preview. The linking is done in src/scripts/motion.ts.
+// The map itself is plain SVG drawn at build time: no map service.
+import { Image } from 'astro:assets';
+import { WORLD, WORLD_PATH } from '../lib/world';
+import type { Place } from '../lib/places';
+
+interface Props { places: Place[] }
+const { places } = Astro.props;
+const live = places.filter((p) => p.href).length;
+const coming = places.length - live;
+
+const pct = (n: number, of: number) => `${((n / of) * 100).toFixed(2)}%`;
+const spots = places.map((p, i) => ({
+  ...p,
+  i,
+  // Text labels (for places without a preview) lean inwards near the edges.
+  anchor: p.x < 90 ? 'start' : p.x > WORLD.width - 90 ? 'end' : 'middle',
+  // Previews open below the dot near the top of the map, and lean inwards near the sides.
+  cardClass: [p.y < WORLD.height * 0.42 ? 'below' : 'above', p.x < 130 ? 'lean-right' : p.x > WORLD.width - 130 ? 'lean-left' : ''],
+}));
+---
+{places.length > 0 && (
+  <section id="places" class="wrap atlas" aria-labelledby="atlas-title" data-reveal data-atlas>
+    <div class="head">
+      <h2 id="atlas-title" class="display">
+        <span class="label">{places.length} places{coming > 0 && ` · ${live} with photos`}</span>
+        <span>Where I’ve been</span>
+      </h2>
+      {coming > 0 && (
+        <ul class="legend label">
+          <li><span class="key solid" aria-hidden="true"></span>Photos up</li>
+          <li><span class="key ring" aria-hidden="true"></span>Visited, photos coming</li>
+        </ul>
+      )}
+    </div>
+
+    <div class="body">
+      <div class="scroller">
+        <div class="stage">
+          <svg viewBox={`0 0 ${WORLD.width} ${WORLD.height}`} role="group" aria-label="World map of places visited">
+            <path class="land" d={WORLD_PATH} aria-hidden="true" />
+            {spots.map((p) => {
+              const label = !p.cover && (
+                <text class="tip" x={p.x} y={p.y - 11} text-anchor={p.anchor}>{p.name} · {p.note}</text>
+              );
+              return p.href ? (
+                <a class="spot" href={p.href} data-place={p.id} style={`--i:${p.i}`} aria-label={`${p.name}, ${p.note}: see the photos`}>
+                  <circle class="ping" cx={p.x} cy={p.y} r="4.2" />
+                  <circle class="hit" cx={p.x} cy={p.y} r="14" />
+                  <circle class="dot" cx={p.x} cy={p.y} r="4.2" />
+                  {label}
+                </a>
+              ) : (
+                <g class="spot soon" data-place={p.id} style={`--i:${p.i}`} tabindex="0" role="img" aria-label={`${p.name}: visited, photos coming`}>
+                  <circle class="hit" cx={p.x} cy={p.y} r="14" />
+                  <circle class="dot" cx={p.x} cy={p.y} r="3.6" />
+                  {label}
+                </g>
+              );
+            })}
+          </svg>
+
+          {spots.filter((p) => p.cover).map((p) => (
+            <div class:list={['card', ...p.cardClass]} data-place={p.id} style={`left:${pct(p.x, WORLD.width)};top:${pct(p.y, WORLD.height)}`} aria-hidden="true">
+              <Image src={p.cover!} alt="" widths={[200, 400]} sizes="180px" loading="lazy" />
+              <span class="card-name">{p.name}</span>
+              <span class="card-note">{p.note} · {p.count} photos</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ol class="list">
+        {spots.map((p) => (
+          <li data-place={p.id}>
+            {p.href ? (
+              <a class="row" href={p.href}>
+                <span class="mark solid" aria-hidden="true"></span>
+                <span class="name">{p.name}</span>
+                <span class="meta">{p.note}</span>
+                <span class="meta count">{p.count} photos</span>
+              </a>
+            ) : (
+              <span class="row soon">
+                <span class="mark ring" aria-hidden="true"></span>
+                <span class="name">{p.name}</span>
+                <span class="meta">{p.note}</span>
+                <span class="meta count"></span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+)}
+
+<style>
+  .atlas { padding-block: 64px 40px; scroll-margin-top: 8px; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 32px; margin-bottom: 32px; }
+  h2 { display: grid; gap: 8px; font-size: clamp(34px, 4.2vw, 56px); line-height: 1; }
+  h2 .label { font-weight: 400; }
+  .legend { list-style: none; margin: 0; padding: 0 0 6px; display: flex; flex-wrap: wrap; gap: 8px 20px; text-transform: none; letter-spacing: 0; }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .key, .mark { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .solid { background: var(--ink); }
+  .ring { border: 1.5px solid var(--ink); }
+
+  .body { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); gap: 32px 56px; align-items: start; }
+
+  /* ---- Map ---- */
+  .scroller { min-width: 0; }
+  .stage { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .land { fill: var(--rule); pointer-events: none; }
+  .hit { fill: transparent; }
+  .dot { fill: var(--ink); stroke: var(--bg); stroke-width: 1.5; transition: r 0.2s ease; }
+  .soon .dot { fill: var(--bg); stroke: var(--ink); stroke-width: 1.5; }
+  .ping { fill: none; stroke: var(--ink); stroke-width: 1; opacity: 0; pointer-events: none; }
+  .spot { cursor: default; outline: none; }
+  a.spot { cursor: pointer; }
+  .spot:global(.is-active) .dot, .spot:focus-visible .dot { r: 6.5; }
+  .spot:focus-visible .dot { stroke: var(--ink); stroke-width: 2; fill: var(--bg); }
+  .tip {
+    font-family: var(--font-mono); font-size: 10px; fill: var(--ink);
+    paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round;
+    opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
+  }
+  .spot:global(.is-active) .tip, .spot:focus-visible .tip { opacity: 1; }
+
+  /* Small photo preview that appears at the dot. */
+  .card {
+    position: absolute; z-index: 2; width: 180px; padding: 6px 6px 8px;
+    display: grid; gap: 2px; pointer-events: none;
+    background: var(--bg); border: 1px solid var(--rule);
+    opacity: 0; visibility: hidden;
+    --tx: -50%; --ty: calc(-100% - 16px); --lift: 6px;
+    transform: translate(var(--tx), calc(var(--ty) + var(--lift)));
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), visibility 0s 0.2s;
+  }
+  .card.below { --ty: 16px; --lift: -6px; }
+  .card.lean-right { --tx: -14px; }
+  .card.lean-left { --tx: calc(-100% + 14px); }
+  .card:global(.is-active) { opacity: 1; visibility: visible; --lift: 0px; transition-delay: 0s; }
+  .card :global(img) { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 4px; background: var(--placeholder); }
+  .card-name { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; font-size: 15px; line-height: 1.2; padding-inline: 2px; }
+  .card-note { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-muted); padding-inline: 2px; }
+
+  /* ---- List ---- */
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  .list li { border-bottom: 1px solid var(--rule); }
+  .row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline;
+    min-height: 44px; padding: 12px 8px; margin-inline: -8px; text-decoration: none; color: var(--ink);
+    transition: background-color 0.15s ease;
+  }
+  .row .mark { align-self: center; }
+  .name { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; font-size: 20px; line-height: 1.2; }
+  .meta { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+  .count { min-width: 64px; text-align: right; }
+  .row.soon .name { color: var(--ink-muted); }
+  li:global(.is-active) .row { background: var(--rule); }
+  a.row:hover { color: var(--ink); }
+
+  /* ---- Entrance: dots pop in one after another once the section scrolls into view ---- */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .atlas .spot { opacity: 0; }
+    :global(html.js) .atlas:global(.in) .spot { animation: spot-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.35s + var(--i) * 0.09s); }
+    .atlas:global(.in) .ping { animation: ping 3.2s ease-out infinite; animation-delay: calc(1.4s + var(--i) * 0.5s); transform-box: fill-box; transform-origin: center; }
+  }
+  @keyframes spot-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ping { 0% { transform: scale(1); opacity: 0.7; } 70%, 100% { transform: scale(4.2); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .dot, .tip, .card, .row { transition: none; } }
+
+  @media (max-width: 900px) {
+    .body { grid-template-columns: minmax(0, 1fr); }
+    /* On small screens the list comes first; the map keeps a readable size and scrolls sideways in its own box. */
+    .list { order: -1; }
+    .scroller { overflow-x: auto; }
+    .stage { min-width: 640px; }
+    .card { display: none; }
+  }
+</style>

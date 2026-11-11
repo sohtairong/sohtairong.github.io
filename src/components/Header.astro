@@ -8,6 +8,7 @@ const { name, instagram } = Astro.props;
     <a href="/#places">Places</a>
     <a href="/#about">About</a>
     {instagram && <a href={instagram} rel="me">Instagram</a>}
+    <button type="button" class="theme" data-theme-toggle aria-label="Switch between light and dark mode">Dark</button>
   </nav>
 </header>
 
@@ -22,4 +23,12 @@ const { name, instagram } = Astro.props;
   }
   nav { display: flex; flex-wrap: wrap; gap: 28px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
   nav a { text-decoration: none; }
+  /* Light/dark switch. Only shown when JavaScript is running, since it needs it. */
+  .theme {
+    display: none; padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-shadow: inherit;
+  }
+  :global(html.js) .theme { display: inline; }
+  .theme:hover { color: var(--ink-muted); }
+  .theme::before { content: '◐ '; }
 </style>

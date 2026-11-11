@@ -19,6 +19,8 @@ const trips = defineCollection({
       date: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use YYYY-MM, e.g. 2026-03'),
       // Optional text to show instead of the month, e.g. "Home, ongoing".
       dateLabel: z.string().optional(),
+      // Optional: where this trip's dot sits on the map. Leave out to use the centre of the country.
+      map: z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).optional(),
       // Set to true to hide a trip without deleting it.
       draft: z.boolean().default(false),
       photos: z
@@ -48,10 +50,20 @@ const about = defineCollection({
       headline: z.string(),
       // Wrap the words to emphasise in *asterisks* — they render in muted italic.
       intro: z.string(),
+      // Full-width photo behind the top of the home page. Leave out to use the newest trip's first featured photo.
+      hero: image().optional(),
+      // Small credit line on the hero photo, e.g. "Kyoto, March 2025".
+      heroCaption: z.string().optional(),
       portrait: image().optional(),
       portraitCaption: z.string().optional(),
       email: z.string().optional(),
       instagram: z.string().url().optional(),
+      // Places you've been but haven't posted photos from yet. They show on the map as rings.
+      // A plain country name works for most countries; otherwise give { name, lat, lng }.
+      // An entry is dropped from the map automatically once a trip for that place exists.
+      alsoVisited: z
+        .array(z.union([z.string(), z.object({ name: z.string(), lat: z.number(), lng: z.number() })]))
+        .default([]),
       roles: z.array(z.object({ role: z.string(), org: z.string() })).default([]),
       links: z.array(z.object({ label: z.string(), url: z.string().url() })).default([]),
     }),

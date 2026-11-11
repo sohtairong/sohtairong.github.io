@@ -148,8 +148,10 @@ country: ${yamlStr(country)}
 cities: ${cities}            # e.g. ["New York", "Boston"]
 date: "${date}"
 # dateLabel: "Home, ongoing"   # optional: replaces "Month Year" on the site
+# map: { lat: 35.01, lng: 135.77 }   # optional: move this trip's dot on the map (default: centre of the country)
 draft: false
 # Each photo: title + story show under it. featured: true puts it in the home-page carousel.
+# Keep text inside the double quotes. For a double quote inside the text, write \\" .
 # layout: wide | pair is optional (trip page); leave it out for the automatic rhythm.
 photos:
 ${photoYaml}

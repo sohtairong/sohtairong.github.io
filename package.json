@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "add-trip": "node scripts/add-trip.mjs",
-    "check": "astro check"
+    "set-hero": "node scripts/set-hero.mjs",
+    "check": "astro build"
   },
   "dependencies": {
     "astro": "7.3.8",
