@@ -47,12 +47,13 @@ function normaliseTrip(id, data, body) {
       .filter((p) => p && typeof p.src === 'string')
       .map((p) => ({
         file: path.basename(p.src),
+        original: typeof p.original === 'string' ? path.basename(p.original) : '',
         title: str(p.title),
         story: str(p.story),
         city: str(p.city),
         alt: str(p.alt),
         featured: p.featured === true,
-        layout: p.layout === 'wide' || p.layout === 'pair' ? p.layout : '',
+        layout: p.layout === 'wide' ? 'wide' : '',
       })),
   };
 }
@@ -87,11 +88,14 @@ export async function writeTrip(id, trip) {
   if (trip.map && Number.isFinite(trip.map.lat) && Number.isFinite(trip.map.lng)) data.map = { lat: trip.map.lat, lng: trip.map.lng };
   data.draft = trip.draft === true;
   data.photos = (trip.photos ?? []).filter((p) => validFileName(str(p.file))).map((p) => {
-    const out = { src: `./photos/${p.file}`, title: str(p.title).trim(), story: str(p.story).trim() };
+    const out = { src: `./photos/${p.file}` };
+    if (validFileName(str(p.original)) && p.original !== p.file) out.original = `./photos/${p.original}`;
+    out.title = str(p.title).trim();
+    out.story = str(p.story).trim();
     if (str(p.city).trim()) out.city = str(p.city).trim();
     if (str(p.alt).trim()) out.alt = str(p.alt).trim();
     out.featured = p.featured === true;
-    if (p.layout === 'wide' || p.layout === 'pair') out.layout = p.layout;
+    if (p.layout === 'wide') out.layout = 'wide';
     return out;
   });
 

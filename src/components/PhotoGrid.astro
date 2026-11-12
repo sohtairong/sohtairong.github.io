@@ -1,0 +1,113 @@
+---
+// The trip page's photos as a tiled grid: three columns on a computer, two on a phone.
+// Only the photos show. Pointing at one (or tabbing to it) darkens it and shows its
+// title, place and story; on touch screens the title and place sit on the photo and
+// a tap opens the viewer with the full story.
+// A photo marked `layout: wide` (Studio: "Large") is two columns across.
+import { Image, getImage } from 'astro:assets';
+import { photosOf, type Trip } from '../lib/trips';
+import { pack, UNIT, GAP } from '../lib/grid';
+
+interface Props { trip: Trip }
+const photos = photosOf(Astro.props.trip);
+const three = pack(photos, 3);
+const two = pack(photos, 2);
+
+const tiles = await Promise.all(photos.map(async (photo, i) => ({
+  photo, a: three[i], b: two[i],
+  full: await getImage({ src: photo.src, width: Math.min(2400, photo.src.width), format: 'webp' }),
+})));
+---
+<div class="wrap">
+  <div class="tiles" style={`--unit-n:${UNIT};--gap-n:${GAP}`}>
+    <div class="grid">
+      {tiles.map(({ photo, a, b, full }, i) => (
+        <figure class="tile" id={`p-${photo.index}`} data-reveal
+          style={`--c3:${a.col + 1};--r3:${a.row + 1};--w3:${a.cols};--h3:${a.rows};--c2:${b.col + 1};--r2:${b.row + 1};--w2:${b.cols};--h2:${b.rows}`}>
+          <button class="media" type="button" data-lb data-full={full.src}
+            data-title={photo.title} data-story={photo.story} data-city={photo.city ?? ''}
+            aria-label={`View larger: ${photo.alt}`}>
+            <Image src={photo.src} alt={photo.alt} loading={i < 3 ? 'eager' : 'lazy'}
+              widths={a.cols === 2 ? [640, 960, 1280, 1800] : [360, 480, 720, 960]}
+              sizes={a.cols === 2
+                ? '(min-width: 1320px) 830px, (min-width: 900px) 66vw, calc(100vw - 32px)'
+                : '(min-width: 1320px) 410px, (min-width: 900px) 33vw, 50vw'} />
+            {(photo.title || photo.story || photo.city) && (
+              <span class="cap">
+                {photo.title && <span class="t">{photo.title}</span>}
+                {photo.city && <span class="c">{photo.city}</span>}
+                {photo.story && <span class="s">{photo.story}</span>}
+              </span>
+            )}
+          </button>
+        </figure>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .wrap { padding-bottom: 72px; }
+  /* Everything is measured in "units" of the grid's own width, so tiles keep their shape at any size. */
+  .tiles { container-type: inline-size; --cols: 3; }
+  .grid {
+    --u: calc(100cqw / (var(--cols) * var(--unit-n) + (var(--cols) - 1) * var(--gap-n)));
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: calc(var(--u) * var(--gap-n)); grid-auto-rows: var(--u);
+    /* The last row of tiles carries a gap underneath; pull it back in. */
+    margin-bottom: calc(var(--u) * var(--gap-n) * -1);
+  }
+  .tile {
+    margin: 0; position: relative; scroll-margin-top: 24px;
+    grid-column: var(--c3) / span var(--w3); grid-row: var(--r3) / span var(--h3);
+  }
+  @media (max-width: 899px) {
+    .tiles { --cols: 2; }
+    .tile { grid-column: var(--c2) / span var(--w2); grid-row: var(--r2) / span var(--h2); }
+  }
+
+  .media {
+    position: absolute; inset: 0 0 calc(var(--u) * var(--gap-n)) 0;
+    display: block; padding: 0; border: 0; background: var(--placeholder); color: #fff;
+    font: inherit; text-align: left; overflow: hidden; cursor: zoom-in;
+  }
+  .media :global(img) { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  /* The caption lies over the photo. */
+  .cap {
+    position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+    padding: clamp(12px, 1.6vw, 20px);
+    background: rgba(10, 10, 9, 0.62); opacity: 0;
+  }
+  .t { font-family: var(--font-display); font-weight: 500; font-size: clamp(15px, 1.5vw, 19px); line-height: 1.2; letter-spacing: -0.01em; }
+  .c { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.78); }
+  .s {
+    margin-top: 4px; font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, 0.9);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; line-clamp: 6; overflow: hidden;
+  }
+  .media:focus-visible .cap { opacity: 1; }
+
+  /* Mouse and trackpad: the caption appears when the photo is pointed at. */
+  @media (hover: hover) {
+    .media:hover .cap { opacity: 1; }
+    @media (prefers-reduced-motion: no-preference) {
+      .cap { transition: opacity 0.3s ease; }
+      .cap > * { transform: translateY(6px); transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
+      .media:hover .cap > *, .media:focus-visible .cap > * { transform: none; }
+      .media :global(img) { transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+      .media:hover :global(img) { transform: scale(1.03); }
+    }
+  }
+
+  /* Touch screens can't hover: the title and place stay on the photo, and a tap opens the viewer with the story. */
+  @media (hover: none) {
+    .cap {
+      opacity: 1; gap: 2px; padding: 28px 10px 9px;
+      inset: auto 0 0 0; background: linear-gradient(to top, rgba(10, 10, 9, 0.78), rgba(10, 10, 9, 0));
+    }
+    .t { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .c { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .s { display: none; }
+  }
+</style>

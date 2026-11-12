@@ -225,9 +225,8 @@ function photoCard(t, p, i) {
       <div class="row2">
         <input type="text" data-p="city" value="${h(p.city)}" placeholder="City" list="city-list" aria-label="City for photo ${i + 1}">
         <select data-p="layout" aria-label="Size on the trip page for photo ${i + 1}">
-          <option value="" ${p.layout === '' ? 'selected' : ''}>Size: automatic</option>
-          <option value="wide" ${p.layout === 'wide' ? 'selected' : ''}>Full width</option>
-          <option value="pair" ${p.layout === 'pair' ? 'selected' : ''}>Side by side</option>
+          <option value="" ${p.layout !== 'wide' ? 'selected' : ''}>Size: normal</option>
+          <option value="wide" ${p.layout === 'wide' ? 'selected' : ''}>Size: large (2 columns)</option>
         </select>
       </div>
       <details class="more" ${p.alt ? 'open' : ''}><summary>Description for screen readers</summary>
@@ -235,6 +234,7 @@ function photoCard(t, p, i) {
       </details>
       <div class="actions">
         <button class="star" type="button" data-act="star" aria-pressed="${p.featured}" title="Show this photo in the scrolling row on the home page">★ Home carousel</button>
+        <button class="link" type="button" data-act="crop" title="Change this photo’s shape, for example tall to wide">${p.original ? 'Edit crop' : 'Crop'}</button>
         <button class="link" type="button" data-act="hero" title="Use this as the big photo at the top of the home page">Use as top photo</button>
         <button class="link danger" type="button" data-act="remove">Remove</button>
       </div>
@@ -338,7 +338,7 @@ async function removePhoto(t, i) {
     return toast(`Couldn’t remove the photo: ${saveError}`, { bad: true });
   }
   let undo = null;
-  try { undo = (await api('DELETE', `/api/trips/${encodeURIComponent(t.id)}/photos/${encodeURIComponent(p.file)}`)).undo; }
+  try { undo = (await api('DELETE', `/api/trips/${encodeURIComponent(t.id)}/photos/${encodeURIComponent(p.file)}${p.original ? `?original=${encodeURIComponent(p.original)}` : ''}`)).undo; }
   catch (e) { toast(e.message, { bad: true }); }
   refreshChanges();
   toast(`Removed “${p.title || p.file}”.`, undo && {
@@ -352,6 +352,111 @@ async function removePhoto(t, i) {
       } catch (e) { toast(e.message, { bad: true }); }
     },
   });
+}
+
+// ---------------------------------------------------------------- cropping
+
+const SHAPES = [
+  ['orig', 'Original shape'], ['1:1', 'Square'], ['3:2', 'Wide 3:2'], ['4:3', 'Wide 4:3'], ['16:9', 'Wide 16:9'],
+  ['4:5', 'Tall 4:5'], ['2:3', 'Tall 2:3'], ['free', 'Free'],
+];
+
+/** Lets you choose which part of a photo to keep. The uncropped photo is kept, so this can always be changed back. */
+async function cropDialog(t, i) {
+  await flush();
+  if (saveError) return toast(`Couldn’t save your last change: ${saveError}`, { bad: true });
+  const p = t.photos[i];
+  const source = p.original || p.file;
+  openDialog(`<div class="inner crop">
+    <div><h2>Crop photo</h2><p class="muted">Pick a shape, then drag the frame to choose what stays. Drag a corner to make it smaller. The full photo is kept, so you can change this later.</p></div>
+    <div class="shapes" role="group" aria-label="Shape">${SHAPES.map(([k, label]) => `<button class="btn small" type="button" data-shape="${k}" aria-pressed="false">${label}</button>`).join('')}</div>
+    <div class="crop-stage"><div class="crop-area"><img src="${h(thumb(t, source, 1600))}" alt="" draggable="false">
+      <div class="crop-box" tabindex="0" aria-label="Crop frame. Arrow keys move it; hold Shift to resize."><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div></div>
+    <div class="foot"><span class="muted" id="crop-info" style="margin-right:auto"></span>
+      ${p.original ? '<button class="btn" type="button" data-uncrop>Remove crop</button>' : ''}
+      <button class="btn" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="button" data-save-crop>Save crop</button></div>
+  </div>`, { wide: true });
+
+  const img = $('.crop-area img', dialog), box = $('.crop-box', dialog), info = $('#crop-info', dialog);
+  await (img.complete && img.naturalWidth ? null : new Promise((ok) => { img.onload = img.onerror = ok; }));
+  if (!img.naturalWidth) { dialog.close(); return toast('That photo couldn’t be opened.', { bad: true }); }
+  const R = img.naturalWidth / img.naturalHeight;   // the photo's own shape
+  let r = { x: 0, y: 0, w: 1, h: 1 };               // the frame, as fractions of the photo
+  let lock = 0;                                     // width ÷ height to keep, 0 = free
+  const MIN = 0.08;
+
+  const draw = () => {
+    box.style.left = `${r.x * 100}%`; box.style.top = `${r.y * 100}%`;
+    box.style.width = `${r.w * 100}%`; box.style.height = `${r.h * 100}%`;
+    const shape = (r.w * R) / r.h;
+    info.textContent = `${shape > 1.05 ? 'Wide' : shape < 0.95 ? 'Tall' : 'Square'} · keeps ${Math.round(r.w * r.h * 100)}% of the photo`;
+  };
+  const setShape = (k) => {
+    $$('[data-shape]', dialog).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.shape === k)));
+    if (k === 'free') { lock = 0; return; }
+    if (k === 'orig') { lock = R; r = { x: 0, y: 0, w: 1, h: 1 }; return draw(); }
+    const [a, b] = k.split(':').map(Number);
+    lock = a / b;
+    // The largest frame of that shape, centred on where the frame is now.
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    let w = 1, hh = R / lock;
+    if (hh > 1) { hh = 1; w = lock / R; }
+    r = { w, h: hh, x: Math.min(1 - w, Math.max(0, cx - w / 2)), y: Math.min(1 - hh, Math.max(0, cy - hh / 2)) };
+    draw();
+  };
+  $$('[data-shape]', dialog).forEach((b) => b.addEventListener('click', () => setShape(b.dataset.shape)));
+  setShape(R < 1 ? '3:2' : 'orig');   // a tall photo starts with a wide frame, the usual reason to crop
+
+  const resize = (corner, px, py) => {
+    const ax = corner.includes('w') ? r.x + r.w : r.x, ay = corner.includes('n') ? r.y + r.h : r.y;   // the fixed corner
+    const maxW = corner.includes('w') ? ax : 1 - ax, maxH = corner.includes('n') ? ay : 1 - ay;
+    let w = Math.min(maxW, Math.max(MIN, corner.includes('w') ? ax - px : px - ax));
+    let hh = Math.min(maxH, Math.max(MIN, corner.includes('n') ? ay - py : py - ay));
+    if (lock) { w = Math.min(w, (maxH * lock) / R); hh = (w * R) / lock; }
+    r = { w, h: hh, x: corner.includes('w') ? ax - w : ax, y: corner.includes('n') ? ay - hh : ay };
+  };
+  box.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); box.focus();
+    const area = img.getBoundingClientRect(), corner = e.target.dataset.h;
+    const start = { x: e.clientX, y: e.clientY, r: { ...r } };
+    box.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      if (corner) resize(corner, (ev.clientX - area.left) / area.width, (ev.clientY - area.top) / area.height);
+      else {
+        r.x = Math.min(1 - r.w, Math.max(0, start.r.x + (ev.clientX - start.x) / area.width));
+        r.y = Math.min(1 - r.h, Math.max(0, start.r.y + (ev.clientY - start.y) / area.height));
+      }
+      draw();
+    };
+    const stop = () => { box.removeEventListener('pointermove', move); box.removeEventListener('pointerup', stop); box.removeEventListener('pointercancel', stop); };
+    box.addEventListener('pointermove', move); box.addEventListener('pointerup', stop); box.addEventListener('pointercancel', stop);
+  });
+  box.addEventListener('keydown', (e) => {
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    if (e.shiftKey) resize('se', r.x + r.w + d[0] * 0.02 + (lock ? d[1] * 0.02 : 0), r.y + r.h + d[1] * 0.02);
+    else { r.x = Math.min(1 - r.w, Math.max(0, r.x + d[0] * 0.02)); r.y = Math.min(1 - r.h, Math.max(0, r.y + d[1] * 0.02)); }
+    draw();
+  });
+
+  const finish = async (path, body, done) => {
+    $$('.foot .btn', dialog).forEach((b) => { b.disabled = true; });
+    try {
+      const out = await api('POST', `/api/trips/${encodeURIComponent(t.id)}/photos/${encodeURIComponent(p.file)}/${path}`, body);
+      p.file = out.file; p.original = out.original;
+      dialog.close();
+      if (currentTrip() === t) rerenderPhotos();
+      renderSide(); refreshChanges(); toast(done);
+    } catch (e) { $$('.foot .btn', dialog).forEach((b) => { b.disabled = false; }); toast(e.message, { bad: true }); }
+  };
+  $('[data-save-crop]', dialog).addEventListener('click', () => {
+    const whole = r.w > 0.995 && r.h > 0.995;
+    if (whole && !p.original) return dialog.close();
+    return whole ? finish('uncrop', {}, 'Crop removed. The full photo is back.') : finish('crop', r, 'Photo cropped.');
+  });
+  $('[data-uncrop]', dialog)?.addEventListener('click', () => finish('uncrop', {}, 'Crop removed. The full photo is back.'));
 }
 
 async function deleteTrip(t) {
@@ -435,7 +540,7 @@ async function addPhotos(trip, files) {
   // New photos go in the order they were taken.
   added.sort((a, b) => (a.takenAt ?? Infinity) - (b.takenAt ?? Infinity) || a.order - b.order);
   let featured = trip.photos.filter((p) => p.featured).length;
-  for (const a of added) trip.photos.push({ file: a.file, title: '', story: '', city: '', alt: '', featured: featured++ < 6, layout: '' });
+  for (const a of added) trip.photos.push({ file: a.file, title: '', story: '', city: '', alt: '', featured: featured++ < 6, original: '', layout: '' });
   const errors = upload.errors;
   upload = null;
   if (currentTrip() === trip) { rerenderPhotos(); const sub = $('#trip-sub'); if (sub && !trip.draft && trip.photos.length) sub.textContent = 'Shown on the site after you publish.'; }
@@ -684,6 +789,7 @@ main.addEventListener('click', async (e) => {
     if (act === 'later') return movePhoto(t, i, i + 1);
     if (act === 'star') { t.photos[i].featured = !t.photos[i].featured; rerenderPhotos(); return touch(t.id, 200); }
     if (act === 'remove') return removePhoto(t, i);
+    if (act === 'crop') return cropDialog(t, i);
     if (act === 'zoom') return openDialog(`<div class="inner"><img class="big" src="${h(thumb(t, t.photos[i].file, 1800))}" alt="${h(t.photos[i].alt || t.photos[i].title)}"><div class="foot"><span class="muted" style="margin-right:auto">${h(t.photos[i].title || t.photos[i].file)}</span><button class="btn primary" type="button" data-close>Close</button></div></div>`, { wide: true });
     if (act === 'hero') {
       try { S.about = (await api('POST', '/api/about/hero-from', { trip: t.id, file: t.photos[i].file })).about; refreshChanges(); toast('This is now the big photo at the top of the home page.'); }

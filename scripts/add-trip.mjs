@@ -152,7 +152,7 @@ date: "${date}"
 draft: false
 # Each photo: title + story show under it. featured: true puts it in the home-page carousel.
 # Keep text inside the double quotes. For a double quote inside the text, write \\" .
-# layout: wide | pair is optional (trip page); leave it out for the automatic rhythm.
+# layout: wide makes a photo a large tile (two columns) on the trip page.
 photos:
 ${photoYaml}
 ---

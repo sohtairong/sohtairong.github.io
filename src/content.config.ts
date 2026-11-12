@@ -27,6 +27,8 @@ const trips = defineCollection({
         .array(
           z.object({
             src: image(),
+            // Set by Studio when a photo has been cropped: the uncropped file, kept so the crop can be redone.
+            original: z.string().optional(),
             title: z.string().default(''),
             story: z.string().default(''),
             city: z.string().optional(),
@@ -34,7 +36,7 @@ const trips = defineCollection({
             alt: z.string().optional(),
             // Featured photos appear in the home-page carousel.
             featured: z.boolean().default(false),
-            // Trip page layout: "wide" = full width, "pair" = side by side. Leave out for automatic.
+            // Trip page size: "wide" = a large tile two columns across. Leave out for a normal tile.
             layout: z.enum(['wide', 'pair']).optional(),
           }),
         )

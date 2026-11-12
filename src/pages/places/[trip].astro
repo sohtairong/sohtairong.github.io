@@ -2,7 +2,7 @@
 // One page per trip folder, generated automatically at build time.
 import Base from '../../layouts/Base.astro';
 import TripHero from '../../components/TripHero.astro';
-import PhotoLayout from '../../components/PhotoLayout.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
 import TripNav from '../../components/TripNav.astro';
 import Lightbox from '../../components/Lightbox.astro';
 import { dateLabel, featuredOf, getTrips, type Trip } from '../../lib/trips';
@@ -24,7 +24,7 @@ const { trip, index, total, next } = Astro.props;
   image={featuredOf(trip)[0]?.src}
 >
   <TripHero trip={trip} index={index} total={total} />
-  <PhotoLayout trip={trip} />
+  <PhotoGrid trip={trip} />
   <TripNav next={total > 1 ? next : undefined} />
   <Lightbox />
 </Base>

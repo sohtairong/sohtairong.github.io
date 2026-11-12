@@ -15,7 +15,8 @@ What you can do in Studio:
 - **Write titles and stories:** type in the boxes beside each photo. Changes save on their own a moment after you stop typing.
 - **Arrange photos:** drag a photo by its ⠿ handle, or use the ← → arrows.
 - **Choose the home carousel photos:** press **★ Home carousel** on the ones you want.
-- **Choose a photo's size on the trip page:** automatic, full width, or side by side.
+- **Choose a photo's size on the trip page:** normal, or large (two columns across).
+- **Crop a photo:** press **Crop** under it, pick a shape (square, wide, tall or free), and drag the frame over the part to keep. This is how you turn a tall photo into a wide one so the trip page looks more varied. The full photo is kept in the trip's `photos/` folder, so **Edit crop** and **Remove crop** work at any time.
 - **Remove a photo or delete a trip:** an **Undo** button appears for a few seconds afterwards.
 - **Hide a trip for now:** tick "Hide this trip from the site".
 - **Edit the home page and About:** the top photo and its caption, headline, portrait, bio, roles, links, and the places on the map you haven't posted yet.
@@ -142,7 +143,7 @@ photos:
     story: "The platform emptied out right after this."
     city: "New York"
     featured: true             # shows in the home-page carousel
-    # layout: wide             # optional: wide | pair on the trip page
+    # layout: wide             # optional: a large tile, two columns across, on the trip page
     # alt: "Empty subway platform at night"   # optional: description for screen readers
 ---
 
@@ -151,7 +152,8 @@ A short paragraph about the trip.
 
 - **Reorder photos:** move whole entries up or down the list.
 - **Choose the carousel photos:** set `featured: true` on the ones you want. If none are featured, the first six are used.
-- **Trip page layout:** photos alternate between one full-width photo and a side-by-side pair. Add `layout: wide` or `layout: pair` to a photo to override this.
+- **Trip page layout:** photos are tiled in columns (three on a computer, two on a phone), each in its own shape, so a mix of tall, wide and square photos gives the most varied page. Add `layout: wide` to make a photo a large tile two columns across.
+- **Cropped photos:** when Studio crops a photo it adds an `original:` line pointing at the uncropped file. Leave both files in `photos/`; delete the `original:` line and point `src:` back at the original to undo a crop by hand.
 - **Remove a photo:** delete its entry and its file in `photos/`.
 
 ### Writing titles and stories without breaking the file
@@ -202,10 +204,11 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 ## Motion and the photo viewer
 
 - **Page transitions:** pages fade into each other, and clicking a carousel photo grows it into the same photo on its trip page.
+- **Trip page tiles:** a trip page shows only the photos. Pointing at a photo (or tabbing to it) darkens it and shows its title, place and story. On phones and tablets, where there is no pointer, the title and place sit along the bottom of each photo and a tap opens the viewer with the full story.
 - **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it.
 - **Arrival motion:** photos fade in as you scroll to them, and the top photo on the home page drifts slowly as you scroll away.
 
-All of it switches off for visitors whose device is set to reduce motion. The code is in `src/scripts/motion.ts`, `src/components/Lightbox.astro` and the end of `src/styles/global.css`.
+All of it switches off for visitors whose device is set to reduce motion. The code is in `src/scripts/motion.ts`, `src/components/PhotoGrid.astro` (tiles and captions; the tiling itself is worked out in `src/lib/grid.ts`), `src/components/Lightbox.astro` and the end of `src/styles/global.css`.
 
 ## Changing the look
 

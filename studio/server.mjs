@@ -267,13 +267,51 @@ async function api(req, res, url) {
       await fs.writeFile(path.join(photoDir, file), out.data);
       return send(res, 200, { file, takenAt: when ? when.getTime() : null, width: out.width, height: out.height, kb: Math.round(out.size / 1024) });
     }
+    // Crop a photo. The uncropped file is kept beside it so the crop can be changed or undone later.
+    if (is('POST', 'trips', '*', 'photos', '*', 'crop') || is('POST', 'trips', '*', 'photos', '*', 'uncrop')) {
+      const file = parts[3];
+      const trip = await readTrip(id);
+      const photo = trip.photos.find((p) => p.file === file);
+      if (!photo) throw new Problem('That photo is no longer in this trip. Reload the page.', 404);
+      const source = photo.original || photo.file;
+      if (!(await exists(path.join(photoDir, source)))) throw new Problem('The original of this photo is missing, so it can’t be cropped again.', 404);
+      const wasCropped = Boolean(photo.original);
+
+      if (parts[4] === 'uncrop') {
+        if (!wasCropped) return send(res, 200, { file, original: '' });
+        photo.file = source; photo.original = '';
+      } else {
+        const c = await readJson(req);
+        const meta = await sharp(path.join(photoDir, source)).metadata();
+        const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number(v)));
+        const left = Math.round(clamp(c.x, 0, 0.98) * meta.width);
+        const top = Math.round(clamp(c.y, 0, 0.98) * meta.height);
+        const width = Math.max(50, Math.min(meta.width - left, Math.round(clamp(c.w, 0.02, 1) * meta.width)));
+        const height = Math.max(50, Math.min(meta.height - top, Math.round(clamp(c.h, 0.02, 1) * meta.height)));
+        if (![left, top, width, height].every(Number.isFinite)) throw new Problem('That crop isn’t valid.');
+        const data = await sharp(path.join(photoDir, source)).extract({ left, top, width, height }).jpeg({ quality: 88, mozjpeg: true }).toBuffer();
+        const name = uniqueName(`${path.basename(source, path.extname(source))}-crop.jpg`, await takenNames(photoDir));
+        await fs.writeFile(path.join(photoDir, name), data);
+        photo.file = name; photo.original = source;
+      }
+      await writeTrip(id, trip);
+      // The previous cropped version is no longer used.
+      if (wasCropped && file !== photo.file && (await exists(path.join(photoDir, file)))) await trashPath(path.join(photoDir, file), `photo__${id}__${file}`);
+      return send(res, 200, { file: photo.file, original: photo.original });
+    }
     if (is('DELETE', 'trips', '*', 'photos', '*')) {
       const file = parts[3];
       if (!validFileName(file)) throw new Problem('Unknown photo.');
       const from = path.join(photoDir, file);
       if (!(await exists(from))) return send(res, 200, { undo: null });
       const token = await trashPath(from, `photo__${id}__${file}`);
-      return send(res, 200, { undo: { kind: 'photo', token, id, file } });
+      const undo = { kind: 'photo', token, id, file };
+      // A cropped photo also has its uncropped original in the folder; it goes too.
+      const original = url.searchParams.get('original');
+      if (original && original !== file && validFileName(original) && (await exists(path.join(photoDir, original)))) {
+        undo.also = { file: original, token: await trashPath(path.join(photoDir, original), `photo__${id}__${original}`) };
+      }
+      return send(res, 200, { undo });
     }
   }
 
@@ -281,7 +319,10 @@ async function api(req, res, url) {
   if (is('POST', 'undo')) {
     const u = await readJson(req);
     if (u.kind === 'trip' && validTripId(u.id)) await restoreFromTrash(u.token, path.join(TRIPS, u.id));
-    else if (u.kind === 'photo' && validTripId(u.id) && validFileName(u.file)) await restoreFromTrash(u.token, path.join(TRIPS, u.id, 'photos', u.file));
+    else if (u.kind === 'photo' && validTripId(u.id) && validFileName(u.file)) {
+      await restoreFromTrash(u.token, path.join(TRIPS, u.id, 'photos', u.file));
+      if (u.also && validFileName(u.also.file)) await restoreFromTrash(u.also.token, path.join(TRIPS, u.id, 'photos', u.also.file));
+    }
     else if (u.kind === 'hero') await restoreFromTrash(u.token, path.join(CONTENT, 'hero.jpg'));
     else throw new Problem('Nothing to undo.');
     return send(res, 200, { ok: true });

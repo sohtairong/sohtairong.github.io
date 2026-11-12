@@ -34,25 +34,3 @@ export async function getTrips(): Promise<Trip[]> {
   const trips = await getCollection('trips', (t) => !t.data.draft && t.data.photos.length > 0);
   return trips.sort((a, b) => b.data.date.localeCompare(a.data.date));
 }
-
-/** Groups photos into rows for the trip page: one wide photo, or two side by side. */
-export function rowsOf(trip: Trip): Photo[][] {
-  const photos = photosOf(trip);
-  const rows: Photo[][] = [];
-  let i = 0;
-  let nextWide = true; // automatic rhythm: wide, pair, wide, pair…
-  while (i < photos.length) {
-    const p = photos[i];
-    const wide = p.layout ? p.layout === 'wide' : nextWide;
-    const partner = photos[i + 1];
-    if (!wide && partner && partner.layout !== 'wide') {
-      rows.push([p, partner]);
-      i += 2;
-    } else {
-      rows.push([p]);
-      i += 1;
-    }
-    nextWide = rows[rows.length - 1].length === 2;
-  }
-  return rows;
-}
