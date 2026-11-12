@@ -180,20 +180,38 @@ All of it switches off for visitors whose device is set to reduce motion. The co
 
 The site has a light and a dark mode. It follows the visitor's device setting, and the Dark/Light switch in the menu lets them choose; the choice is remembered on that device. Both sets of colours are in `tokens.css`. The full-screen photo viewer is always dark.
 
-## Putting it online
+## Putting it online (GitHub Pages)
 
-1. Create a new repository on GitHub and push this folder to it.
-2. Sign in to [Cloudflare Pages](https://pages.cloudflare.com), [Netlify](https://www.netlify.com) or [Vercel](https://vercel.com) with GitHub and import the repository. All three are free for a site like this.
-3. Use build command `npm run build` and output folder `dist`.
-4. Set your real address in `astro.config.mjs` (`site:`).
+The project is set up for GitHub Pages at **https://sohtairong.github.io**. The file `.github/workflows/deploy.yml` tells GitHub to build and publish the site on every push.
 
-From then on, every `git push` updates the live site within a minute or two.
+One-time setup:
 
-## Sharing links, the tab icon and the "not found" page
+1. On github.com, open your existing repository (`tairong-personal-portfolio`), go to **Settings** and rename it to exactly `sohtairong.github.io`. It must be **public**.
+2. In this folder, point git at the new name and push:
 
-- **Link previews:** when a page's link is shared (LinkedIn, WhatsApp, Telegram…), it shows a photo, the title and a one-line description. The home page uses the hero photo; each trip page uses its first featured photo. These only work once the site is online **and** `site:` in `astro.config.mjs` is set to your real address.
-- **Tab icon:** `public/favicon.svg` is a plain "TR". Replace that file to change it.
-- **Not found page:** `src/pages/404.astro` is shown for addresses that don't exist. It lists your places so visitors can carry on.
+   ```sh
+   git remote set-url origin https://github.com/sohtairong/sohtairong.github.io.git
+   git add .
+   git commit -m "Set up GitHub Pages"
+   git push
+   ```
+
+3. In the repository on github.com, open **Settings › Pages** and set **Source** to **GitHub Actions**.
+4. Open the **Actions** tab and wait for the run to go green (a minute or two). The site is then live.
+
+From then on, publishing is just:
+
+```sh
+git add .
+git commit -m "Add Taiwan"
+git push
+```
+
+Notes:
+
+- The repository name matters. `sohtairong.github.io` puts the site at the top of the address, which the site's links expect. Any other name puts it in a sub-folder and breaks them.
+- On the free plan the repository must be public, so the photo files and trip text are visible on GitHub too.
+- If you move to your own domain later, change the `site:` line in `astro.config.mjs` and add the domain under Settings › Pages.
 
 ## Storage notes
 

@@ -21,9 +21,9 @@ links:
   - label: LinkedIn
     url: https://www.linkedin.com/in/soh-tai-rong
   - label: GitHub
-    url: https://github.com/str58290
+    url: https://github.com/sohtairong
 ---
 
 I’m Tai Rong. I take photos when I travel, and in between I’m a software engineer in Singapore, building full-stack and AI tools at Tessal8 and Computer Guys.
 
-This site is the off-duty side. For the work side, see my [LinkedIn](https://www.linkedin.com/in/soh-tai-rong) or [GitHub](https://github.com/str58290).
+This site is the off-duty side. For the work side, see my [LinkedIn](https://www.linkedin.com/in/soh-tai-rong) or [GitHub](https://github.com/sohtairong).
