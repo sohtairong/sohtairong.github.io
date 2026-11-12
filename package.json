@@ -7,13 +7,15 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "studio": "node studio/server.mjs",
     "add-trip": "node scripts/add-trip.mjs",
     "set-hero": "node scripts/set-hero.mjs",
     "check": "astro build"
   },
   "dependencies": {
     "astro": "7.3.8",
-    "sharp": "0.34.5"
+    "sharp": "0.34.5",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "exifr": "7.1.3",

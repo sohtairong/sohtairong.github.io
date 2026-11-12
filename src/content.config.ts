@@ -38,7 +38,8 @@ const trips = defineCollection({
             layout: z.enum(['wide', 'pair']).optional(),
           }),
         )
-        .min(1, 'A trip needs at least one photo'),
+        // A trip with no photos yet is allowed; it stays off the site until it has one.
+        .default([]),
     }),
 });
 

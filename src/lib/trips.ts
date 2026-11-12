@@ -29,9 +29,9 @@ export function featuredOf(trip: Trip, fallback = 6): Photo[] {
   return picked.length ? picked : all.slice(0, fallback);
 }
 
-/** All published trips, newest first. */
+/** All published trips (not hidden, at least one photo), newest first. */
 export async function getTrips(): Promise<Trip[]> {
-  const trips = await getCollection('trips', (t) => !t.data.draft);
+  const trips = await getCollection('trips', (t) => !t.data.draft && t.data.photos.length > 0);
   return trips.sort((a, b) => b.data.date.localeCompare(a.data.date));
 }
 

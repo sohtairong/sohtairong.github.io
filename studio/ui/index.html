@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600&family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Studio<span id="brand-name"></span></div>
+    <div class="top-right">
+      <span id="save-state" class="save-state" role="status" aria-live="polite">Loading…</span>
+      <a id="preview-link" class="btn" href="#" target="_blank" rel="noopener">Preview site ↗</a>
+      <button id="publish-btn" class="btn primary" type="button">Publish</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="side" aria-label="Sections">
+      <button class="nav-item" type="button" data-nav="site" id="nav-site">
+        <span class="nav-title">Home page &amp; About</span>
+        <span class="nav-sub">Top photo, headline, bio, links, map</span>
+      </button>
+      <div class="side-head">
+        <span>Trips</span>
+        <button class="btn small" type="button" id="new-trip">+ New trip</button>
+      </div>
+      <ul id="trip-list" class="trip-list"></ul>
+      <p class="side-foot" id="side-foot"></p>
+    </nav>
+    <main id="main" tabindex="-1"></main>
+  </div>
+
+  <div id="drop-veil" class="drop-veil" hidden><div><strong>Drop photos to add them</strong><span id="drop-veil-sub"></span></div></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <dialog id="dialog" class="dialog"></dialog>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

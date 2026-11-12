@@ -2,9 +2,38 @@
 
 A travel photography portfolio built with [Astro](https://astro.build). Each trip is a folder of photos plus one text file. Add a folder and the site updates itself: the list of places, the home-page carousels, and a page for the trip.
 
+## Studio: edit the site without commands
+
+Studio is a private editor for this site. It runs only on your computer and never becomes part of the public site.
+
+**To open it:** double-click **Open Studio.command** in this folder. A Terminal window opens (leave it open while you work) and Studio appears in your browser. Close the Terminal window when you're done.
+
+What you can do in Studio:
+
+- **Add a trip:** press **+ New trip**, or drag a folder of photos anywhere onto the page. Type the country and month; the month is read from the first photo when it can be. iPhone HEIC photos are converted, every photo is resized, and all location data is removed.
+- **Add photos to a trip:** open the trip and drag photos or a folder onto the page. New photos are added in the order they were taken.
+- **Write titles and stories:** type in the boxes beside each photo. Changes save on their own a moment after you stop typing.
+- **Arrange photos:** drag a photo by its ⠿ handle, or use the ← → arrows.
+- **Choose the home carousel photos:** press **★ Home carousel** on the ones you want.
+- **Choose a photo's size on the trip page:** automatic, full width, or side by side.
+- **Remove a photo or delete a trip:** an **Undo** button appears for a few seconds afterwards.
+- **Hide a trip for now:** tick "Hide this trip from the site".
+- **Edit the home page and About:** the top photo and its caption, headline, portrait, bio, roles, links, and the places on the map you haven't posted yet.
+- **Use a trip photo as the top photo:** press **Use as top photo** under it.
+- **Preview:** **Preview site** opens the real site as visitors will see it, running on your computer.
+- **Publish:** **Publish** lists what changed in plain words, then sends it to the live site. It updates in a minute or two.
+
+Good to know:
+
+- Studio works on the same files described in the rest of this README, so editing by hand and the commands below still work. Reload the Studio page after editing a file by hand.
+- Removed photos and deleted trips go to a hidden `.studio-trash` folder in this project, not the Mac's Trash. It isn't published. You can empty it whenever you like.
+- A trip with no photos is kept but stays off the site until it has one.
+- If the double-click is blocked the first time, right-click the file and choose **Open**. You can also start Studio with `npm run studio`.
+- Publishing uses the GitHub login already set up on this computer.
+
 ## Quick reference
 
-Everything you'll do regularly, in one place. Run commands in this folder.
+Prefer typing commands? Everything Studio does can also be done this way. Run commands in this folder.
 
 | I want to… | Do this |
 |---|---|
@@ -19,7 +48,8 @@ Everything you'll do regularly, in one place. Run commands in this folder.
 | Change my headline, bio, roles or links | Edit `src/content/about.md` |
 | Hide a trip for now | Set `draft: true` in its `index.md` |
 | Check for mistakes before publishing | `npm run check` |
-| Publish | `git add . && git commit -m "Add Taiwan" && git push` (once the site is online) |
+| Publish | `git add . && git commit -m "Add Taiwan" && git push`, live in a minute or two |
+| See whether it published | The repository's **Actions** tab on github.com: green tick = live |
 
 You never need to touch the code to do any of these. The list of places, the map, the carousels, the trip pages, the photo counts and the link previews all update themselves.
 
@@ -61,10 +91,13 @@ src/
 │        └─ photos/            ← the photos (added by the import tool)
 ├─ components/                 ← the building blocks of each page
 ├─ pages/                      ← home page, the automatic trip pages, the "not found" page
-├─ lib/                        ← sorting, labels, map positions (places.ts has the country list)
+├─ lib/                        ← sorting, labels, map positions (countries.json has the country list)
 ├─ scripts/motion.ts           ← transitions, arrival motion, light/dark switch, map hovering
 ├─ styles/tokens.css           ← colours (light and dark), fonts, sizes, carousel speed
 └─ content.config.ts           ← the rules each content file must follow
+studio/                        ← Studio, the private editor (server.mjs + its interface in ui/)
+Open Studio.command            ← double-click to open Studio
+scripts/lib/                   ← photo and content handling shared by Studio and the tools
 scripts/add-trip.mjs           ← the photo import tool
 scripts/set-hero.mjs           ← sets the big photo at the top
 public/favicon.svg             ← the browser tab icon
@@ -138,7 +171,7 @@ Keep the spacing at the start of each line as the import tool wrote it. If you s
 | An error naming a trip's `index.md` | A field has a typo or broken quotes. The message gives the line. Compare it with another photo's entry. |
 | "Use YYYY-MM, e.g. 2026-03" | The trip's `date:` must look like `"2026-03"`. |
 | A photo doesn't show | Its `src:` must match the file name in the trip's `photos/` folder exactly. |
-| A place is missing from the map | The build prints a `[map]` warning. Add `map: { lat: …, lng: … }` to the trip, or add the country to `src/lib/places.ts`. |
+| A place is missing from the map | The build prints a `[map]` warning. Add `map: { lat: …, lng: … }` to the trip, or add the country to `src/lib/countries.json`. |
 | The import tool fails on a HEIC photo | In Photos on your Mac, use File › Export › Export Photos and pick JPEG, then import that folder. |
 | Changes don't appear | Stop the dev server (Ctrl+C) and run `npm run dev` again. |
 
@@ -148,7 +181,7 @@ Right under the top photo, the home page has a world map beside the list of plac
 
 - **Solid dot:** a trip with photos. It links to the trip page. If you've been to a country more than once, the dot opens the newest trip.
 - **Ring:** a place you've been but haven't posted yet. List these in `src/content/about.md` under `alsoVisited: [Taiwan, Korea]`. When you add a trip for one, its ring becomes a solid dot on its own; you can leave the name in the list or remove it.
-- **Position:** dots sit at the centre of the country. To move one, add `map: { lat: 35.01, lng: 135.77 }` to the trip's `index.md`. For a country the site doesn't know, use `- { name: "Bhutan", lat: 27.5, lng: 90.4 }` in `alsoVisited`, or add it to the list in `src/lib/places.ts`.
+- **Position:** dots sit at the centre of the country. To move one, add `map: { lat: 35.01, lng: 135.77 }` to the trip's `index.md`. For a country the site doesn't know, use `- { name: "Bhutan", lat: 27.5, lng: 90.4 }` in `alsoVisited`, or add it to the list in `src/lib/countries.json`.
 
 ## Changing your details
 
@@ -180,38 +213,58 @@ All of it switches off for visitors whose device is set to reduce motion. The co
 
 The site has a light and a dark mode. It follows the visitor's device setting, and the Dark/Light switch in the menu lets them choose; the choice is remembered on that device. Both sets of colours are in `tokens.css`. The full-screen photo viewer is always dark.
 
-## Putting it online (GitHub Pages)
+## Publishing (GitHub Pages)
 
-The project is set up for GitHub Pages at **https://sohtairong.github.io**. The file `.github/workflows/deploy.yml` tells GitHub to build and publish the site on every push.
+The site is live at **https://sohtairong.github.io**. It is published from the GitHub repository `sohtairong/sohtairong.github.io`, and publishing is automatic: every push to the `main` branch rebuilds the site and puts it online.
 
-One-time setup:
+### Publishing a change
 
-1. On github.com, open your existing repository (`tairong-personal-portfolio`), go to **Settings** and rename it to exactly `sohtairong.github.io`. It must be **public**.
-2. In this folder, point git at the new name and push:
+1. Check it locally first: `npm run dev` to look at it, `npm run check` to catch mistakes.
+2. Save and send it:
 
    ```sh
-   git remote set-url origin https://github.com/sohtairong/sohtairong.github.io.git
    git add .
-   git commit -m "Set up GitHub Pages"
+   git commit -m "Add Taiwan"
    git push
    ```
 
-3. In the repository on github.com, open **Settings › Pages** and set **Source** to **GitHub Actions**.
-4. Open the **Actions** tab and wait for the run to go green (a minute or two). The site is then live.
+3. Wait a minute or two, then reload https://sohtairong.github.io. If you still see the old version, do a hard refresh (Cmd+Shift+R).
 
-From then on, publishing is just:
+### Checking that it published
 
-```sh
-git add .
-git commit -m "Add Taiwan"
-git push
-```
+On github.com, open the repository's **Actions** tab. Each push adds a run called **Deploy to GitHub Pages**:
 
-Notes:
+- **Green tick:** the site built and is online.
+- **Yellow dot:** it's still running.
+- **Red cross:** the build failed and the live site stays on the last good version. Click the run, then the red step, to read the error. It is nearly always a mistake in a trip's `index.md`, and `npm run check` shows the same error on your Mac. Fix it and push again.
 
-- The repository name matters. `sohtairong.github.io` puts the site at the top of the address, which the site's links expect. Any other name puts it in a sub-folder and breaks them.
-- On the free plan the repository must be public, so the photo files and trip text are visible on GitHub too.
-- If you move to your own domain later, change the `site:` line in `astro.config.mjs` and add the domain under Settings › Pages.
+To publish again without changing anything, open that workflow in the Actions tab and choose **Run workflow**.
+
+Red runs named **pages build and deployment** are something else: GitHub's older built-in publisher, which can't build this project. They don't affect the site. To stop them, set **Settings > Pages > Source** to **GitHub Actions**.
+
+### How it's set up
+
+- `.github/workflows/deploy.yml` is the recipe GitHub follows on every push. You shouldn't need to edit it.
+- `site:` in `astro.config.mjs` holds the public address. Link previews and page addresses are built from it.
+- **Settings > Pages > Source** on github.com is set to **GitHub Actions**.
+- The repository must be **public** on GitHub's free plan, so the photo files and trip text are visible there too.
+- The repository name matters. `sohtairong.github.io` puts the site at the top of the address, which the site's links expect. Renaming the repository, or your GitHub username, changes the address and breaks them until `site:` is updated to match.
+
+### Moving to your own domain later
+
+1. Buy the domain and, in the repository, open **Settings > Pages > Custom domain** and follow GitHub's steps.
+2. Change `site:` in `astro.config.mjs` to the new address, for example `https://tairong.dev`.
+3. Add a file `public/CNAME` containing just the domain name, so the setting survives each publish.
+4. Commit and push.
+
+### Setting it up again from scratch
+
+Only needed if you ever move the project to a new repository:
+
+1. Create a **public** repository named `<your-username>.github.io`.
+2. Set `site:` in `astro.config.mjs` to `https://<your-username>.github.io`.
+3. Run `git remote set-url origin https://github.com/<your-username>/<your-username>.github.io.git` and `git push -u origin main`.
+4. Set **Settings > Pages > Source** to **GitHub Actions**.
 
 ## Storage notes
 
