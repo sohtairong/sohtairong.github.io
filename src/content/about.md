@@ -6,7 +6,7 @@ intro: "Shot on iPhone, between flights, hikes and on long walks. Each place has
 hero: "./hero.jpg"
 heroCaption: "‎⁨Vikhammer⁩, ⁨Central Norway⁩, ⁨Norway⁩, May 2026"
 portrait: "./portrait.jpg"
-portraitCaption: "TR,"
+portraitCaption: "TM,‎⁨ New York⁩, ⁨North Hudson⁩, 29 Dec 2025"
 email: "sohtairong@gmail.com"
 instagram: "https://www.instagram.com/str58290_photodump/"
 alsoVisited:
