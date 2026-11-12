@@ -205,6 +205,8 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 
 - **Page transitions:** pages fade into each other, and clicking a carousel photo grows it into the same photo on its trip page.
 - **Trip page tiles:** a trip page shows only the photos. Pointing at a photo (or tabbing to it) darkens it and shows its title, place and story. On phones and tablets, where there is no pointer, the title and place sit along the bottom of each photo and a tap opens the viewer with the full story.
+- **Teleport:** clicking a place on the map (or in the list beside it) zooms the map into that spot, shows the place name, then opens the trip. `ZOOM` and `DIVE_MS` at the end of `src/scripts/motion.ts` set how far and how long.
+- **Smooth scrolling:** with a mouse wheel or trackpad the page glides to a stop. `EASE` in `src/scripts/motion.ts` sets the feel (higher is snappier).
 - **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it.
 - **Arrival motion:** photos fade in as you scroll to them, and the top photo on the home page drifts slowly as you scroll away.
 

@@ -42,6 +42,8 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-o
 /* Arrival motion: things fade and rise slightly as they scroll into view.
    Only applies when JavaScript is running, and never with reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
+  /* Links within a page (Places, About, Back to top) glide there instead of jumping. */
+  html { scroll-behavior: smooth; }
   html.js [data-reveal] {
     opacity: 0; transform: translateY(18px);
     transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -54,3 +56,13 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-o
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; }
 ::view-transition-group(photo-morph) { animation-duration: 0.5s; animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1); }
 ::view-transition-old(photo-morph), ::view-transition-new(photo-morph) { height: 100%; width: 100%; object-fit: cover; }
+
+/* Teleport: the layer that zooms the map into a place before its trip opens (src/scripts/motion.ts). */
+.teleport { position: fixed; inset: 0; z-index: 100; overflow: hidden; pointer-events: none; }
+.teleport-veil { position: absolute; inset: 0; background: var(--bg); opacity: 0; }
+.teleport svg { will-change: transform, opacity; }
+.teleport-name {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0;
+  display: grid; gap: 10px; justify-items: center; text-align: center; width: max-content; max-width: calc(100vw - 32px); color: var(--ink);
+}
+.teleport-name .display { font-size: clamp(44px, 9vw, 120px); line-height: 1; }

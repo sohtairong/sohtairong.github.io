@@ -66,6 +66,10 @@ const tiles = await Promise.all(photos.map(async (photo, i) => ({
     .tile { grid-column: var(--c2) / span var(--w2); grid-row: var(--r2) / span var(--h2); }
   }
 
+  /* Tiles in the same row arrive one after another, left to right. */
+  .tile { transition-delay: calc((var(--c3) - 1) * 90ms); }
+  @media (max-width: 899px) { .tile { transition-delay: calc((var(--c2) - 1) * 90ms); } }
+
   .media {
     position: absolute; inset: 0 0 calc(var(--u) * var(--gap-n)) 0;
     display: block; padding: 0; border: 0; background: var(--placeholder); color: #fff;
