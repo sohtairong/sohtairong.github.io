@@ -5,7 +5,7 @@ headline: "Photographs, sorted by *where I was*."
 intro: "Shot on iPhone, between flights and on long walks. Each place has its own page with the stories behind the pictures."
 hero: "./hero.jpg"
 portrait: "./portrait.jpg"
-portraitCaption: "Me, [place], [month year]"
+portraitCaption: "Me, Blossom, 03 Nov 2026"
 email: "sohtairong@gmail.com"
 alsoVisited:
   - "Taiwan"
