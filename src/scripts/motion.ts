@@ -3,8 +3,8 @@ import { navigate } from 'astro:transitions/client';
 //
 // 1. Photo morph: clicking a carousel photo grows it into the same photo on the trip page.
 // 2. Arrival motion: [data-reveal] elements fade in as they scroll into view.
-// 5. Smooth scrolling: the page glides to a stop instead of moving in steps.
-// 6. Teleport: clicking a place on the atlas zooms the map into it, then opens the trip (end of this file).
+// 5. Teleport: clicking a place on the atlas zooms the map into it, then opens the trip (near the end of this file).
+// 6. Carousel pause: the Pause / Play button on the home page rows.
 
 const MORPH = 'photo-morph';
 let pendingTarget: string | null = null;
@@ -136,54 +136,7 @@ for (const type of ['pointerout', 'focusout'] as const) {
   });
 }
 
-// --- 5. Smooth scrolling ---------------------------------------------------------
-// Scrolling with a mouse wheel or trackpad eases the page along and lets it glide to a stop.
-// Left alone: touch screens (already smooth), reduced-motion devices, the photo viewer,
-// pinch-zoom, sideways scrolling, and anything that scrolls inside the page.
-const EASE = 40; // higher = snappier, lower = floatier
-const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
-let glideTo = 0, glideAt = 0, gliding = false, lastFrame = 0;
-
-function stopGlide() { gliding = false; }
-
-function glide(now: number) {
-  if (!gliding) return;
-  const dt = Math.min(0.05, (now - lastFrame) / 1000);
-  lastFrame = now;
-  glideAt += (glideTo - glideAt) * (1 - Math.exp(-EASE * dt));
-  if (Math.abs(glideTo - glideAt) < 0.5) { glideAt = glideTo; gliding = false; }
-  window.scrollTo({ top: glideAt, behavior: 'instant' });
-  if (gliding) requestAnimationFrame(glide);
-}
-
-function scrollsItself(el: Element | null, dy: number) {
-  for (; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
-    if (el.scrollHeight <= el.clientHeight + 1) continue;
-    const o = getComputedStyle(el).overflowY;
-    if ((o === 'auto' || o === 'scroll') && (dy < 0 ? el.scrollTop > 0 : el.scrollTop + el.clientHeight < el.scrollHeight - 1)) return true;
-  }
-  return false;
-}
-
-window.addEventListener('wheel', (e) => {
-  if (e.defaultPrevented || e.ctrlKey || e.metaKey || !finePointer.matches || reducedMotion()) return;
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-  if (scrollsItself(e.target as Element | null, e.deltaY)) return;
-  e.preventDefault();
-  if (document.querySelector('dialog[open]')) return; // the page stays put behind the photo viewer
-  const dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
-  if (!gliding) { glideAt = glideTo = window.scrollY; gliding = true; lastFrame = performance.now(); requestAnimationFrame(glide); }
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  glideTo = Math.max(0, Math.min(max, glideTo + dy));
-}, { passive: false });
-
-// Anything else that moves the page (keys, dragging the scrollbar, a link, a new page) takes over at once.
-window.addEventListener('keydown', stopGlide);
-window.addEventListener('pointerdown', stopGlide);
-document.addEventListener('click', stopGlide);
-document.addEventListener('astro:before-swap', stopGlide);
-
-// --- 6. Teleport ---------------------------------------------------------------
+// --- 5. Teleport ---------------------------------------------------------------
 // Clicking a place with photos (its dot or its row in the list) lifts the map off the page,
 // dives into that spot while everything else falls away, shows the place name, then opens the trip.
 const ZOOM = 9;          // how far the map zooms in
@@ -257,7 +210,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('astro:page-load', () => { teleporting = false; document.querySelectorAll('.teleport').forEach((el) => el.remove()); });
 window.addEventListener('pageshow', () => { teleporting = false; document.querySelectorAll('.teleport').forEach((el) => el.remove()); });
 
-// --- 7. Carousel pause ---------------------------------------------------------------
+// --- 6. Carousel pause ---------------------------------------------------------------
 // The Pause / Play button on the home page rows stops or restarts all of them, and the choice is remembered.
 function carouselsPaused() { return document.documentElement.classList.contains('carousels-paused'); }
 function labelCarouselButtons() {

@@ -208,8 +208,7 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 - **Page transitions:** pages fade into each other, and clicking a carousel photo grows it into the same photo on its trip page.
 - **Trip page tiles:** a trip page shows only the photos. Pointing at a photo (or tabbing to it) darkens it and shows its title, place and story. On phones and tablets, where there is no pointer, the title and place sit along the bottom of each photo and a tap opens the viewer with the full story.
 - **Teleport:** clicking a place on the map (or in the list beside it) zooms the map into that spot, shows the place name, then opens the trip. `ZOOM` and `DIVE_MS` at the end of `src/scripts/motion.ts` set how far and how long.
-- **Smooth scrolling:** with a mouse wheel or trackpad the page glides to a stop. `EASE` in `src/scripts/motion.ts` sets the feel (higher is snappier).
-- **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it. Pinch, double-tap or double-click zooms in, and dragging looks around.
+- **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it. To zoom on a computer, click the photo (it zooms into the spot you clicked), scroll, pinch on a trackpad or press + and −; drag to look around and click again to zoom back out. On a phone, pinch or double-tap.
 - **Sharing one photo:** every photo has its own address (`/places/<trip>/<photo>/`), taken from its file name so it stays the same when you reorder or crop. While a photo is open the address bar shows it, and **Share** in the viewer copies it (or opens the share sheet on a phone). The link opens the trip with that photo showing, and its preview in messages is that photo.
 - **Pausing the moving rows:** each row on the home page has a **Pause / Play** button. It stops or restarts all the rows, is remembered on that device, and while paused the rows can be swiped by hand.
 - **The lines at the top:** the large line comes into focus one word at a time and the smaller line slides in after it. As you scroll away, the two lines lift at different speeds and fade. The timings are at the end of the styles in `src/components/Intro.astro`.
@@ -218,6 +217,8 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 All of it switches off for visitors whose device is set to reduce motion. The code is in `src/scripts/motion.ts`, `src/components/PhotoGrid.astro` (tiles and captions; the tiling itself is worked out in `src/lib/grid.ts`), `src/components/Lightbox.astro` and the end of `src/styles/global.css`.
 
 ## Changing the look
+
+**Fonts are hosted with the site**, in `public/fonts/`; nothing is fetched from Google or anyone else. The `@font-face` rules are at the top of `src/styles/global.css`, and the font names the site uses are in `src/styles/tokens.css`.
 
 `src/styles/tokens.css` controls the colours, fonts, page width, carousel photo size and carousel speed. Change a value there and it updates everywhere.
 
