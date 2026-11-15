@@ -1,0 +1,27 @@
+---
+// A trip page. Used for the trip itself (/places/<trip>/) and for each photo's own address
+// (/places/<trip>/<photo>/), which is the same page with that photo open in the viewer and
+// that photo as the picture shown when the link is shared.
+import Base from '../layouts/Base.astro';
+import TripHero from './TripHero.astro';
+import PhotoGrid from './PhotoGrid.astro';
+import TripNav from './TripNav.astro';
+import Lightbox from './Lightbox.astro';
+import { dateLabel, featuredOf, type Photo, type Trip } from '../lib/trips';
+
+interface Props { trip: Trip; index: number; total: number; next: Trip; open?: Photo }
+const { trip, index, total, next, open } = Astro.props;
+const place = `${trip.data.country}, ${dateLabel(trip)}`;
+---
+<Base
+  title={open ? `${open.title || 'Photo'} · ${place}` : place}
+  description={open
+    ? (open.story || `A photograph from ${[open.city, place].filter(Boolean).join(', ')}.`)
+    : `${trip.data.photos.length} photographs from ${place}, with the stories behind them.`}
+  image={open ? open.src : featuredOf(trip)[0]?.src}
+>
+  <TripHero trip={trip} index={index} total={total} />
+  <PhotoGrid trip={trip} />
+  <TripNav next={total > 1 ? next : undefined} />
+  <Lightbox base={`/places/${trip.id}/`} open={open?.key} />
+</Base>

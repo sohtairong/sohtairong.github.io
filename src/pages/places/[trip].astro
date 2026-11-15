@@ -1,11 +1,7 @@
 ---
 // One page per trip folder, generated automatically at build time.
-import Base from '../../layouts/Base.astro';
-import TripHero from '../../components/TripHero.astro';
-import PhotoGrid from '../../components/PhotoGrid.astro';
-import TripNav from '../../components/TripNav.astro';
-import Lightbox from '../../components/Lightbox.astro';
-import { dateLabel, featuredOf, getTrips, type Trip } from '../../lib/trips';
+import TripPage from '../../components/TripPage.astro';
+import { getTrips, type Trip } from '../../lib/trips';
 
 export async function getStaticPaths() {
   const trips = await getTrips();
@@ -16,15 +12,5 @@ export async function getStaticPaths() {
 }
 
 interface Props { trip: Trip; index: number; total: number; next: Trip }
-const { trip, index, total, next } = Astro.props;
 ---
-<Base
-  title={`${trip.data.country}, ${dateLabel(trip)}`}
-  description={`${trip.data.photos.length} photographs from ${trip.data.country}, ${dateLabel(trip)}, with the stories behind them.`}
-  image={featuredOf(trip)[0]?.src}
->
-  <TripHero trip={trip} index={index} total={total} />
-  <PhotoGrid trip={trip} />
-  <TripNav next={total > 1 ? next : undefined} />
-  <Lightbox />
-</Base>
+<TripPage {...Astro.props} />

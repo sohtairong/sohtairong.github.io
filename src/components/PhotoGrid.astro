@@ -24,7 +24,7 @@ const tiles = await Promise.all(photos.map(async (photo, i) => ({
       {tiles.map(({ photo, a, b, full }, i) => (
         <figure class="tile" id={`p-${photo.index}`} data-reveal
           style={`--c3:${a.col + 1};--r3:${a.row + 1};--w3:${a.cols};--h3:${a.rows};--c2:${b.col + 1};--r2:${b.row + 1};--w2:${b.cols};--h2:${b.rows}`}>
-          <button class="media" type="button" data-lb data-full={full.src}
+          <button class="media" type="button" data-lb data-key={photo.key} data-full={full.src}
             data-title={photo.title} data-story={photo.story} data-city={photo.city ?? ''}
             aria-label={`View larger: ${photo.alt}`}>
             <Image src={photo.src} alt={photo.alt} loading={i < 3 ? 'eager' : 'lazy'}

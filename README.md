@@ -209,7 +209,9 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 - **Trip page tiles:** a trip page shows only the photos. Pointing at a photo (or tabbing to it) darkens it and shows its title, place and story. On phones and tablets, where there is no pointer, the title and place sit along the bottom of each photo and a tap opens the viewer with the full story.
 - **Teleport:** clicking a place on the map (or in the list beside it) zooms the map into that spot, shows the place name, then opens the trip. `ZOOM` and `DIVE_MS` at the end of `src/scripts/motion.ts` set how far and how long.
 - **Smooth scrolling:** with a mouse wheel or trackpad the page glides to a stop. `EASE` in `src/scripts/motion.ts` sets the feel (higher is snappier).
-- **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it.
+- **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it. Pinch, double-tap or double-click zooms in, and dragging looks around.
+- **Sharing one photo:** every photo has its own address (`/places/<trip>/<photo>/`), taken from its file name so it stays the same when you reorder or crop. While a photo is open the address bar shows it, and **Share** in the viewer copies it (or opens the share sheet on a phone). The link opens the trip with that photo showing, and its preview in messages is that photo.
+- **Pausing the moving rows:** each row on the home page has a **Pause / Play** button. It stops or restarts all the rows, is remembered on that device, and while paused the rows can be swiped by hand.
 - **The lines at the top:** the large line comes into focus one word at a time and the smaller line slides in after it. As you scroll away, the two lines lift at different speeds and fade. The timings are at the end of the styles in `src/components/Intro.astro`.
 - **Arrival motion:** photos fade in as you scroll to them, and the top photo on the home page drifts slowly as you scroll away.
 

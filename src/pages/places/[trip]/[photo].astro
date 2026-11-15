@@ -1,0 +1,19 @@
+---
+// One address per photo (/places/<trip>/<photo>/), so a single photo can be shared.
+// It shows the trip page with that photo open in the viewer.
+import TripPage from '../../../components/TripPage.astro';
+import { getTrips, photosOf, type Photo, type Trip } from '../../../lib/trips';
+
+export async function getStaticPaths() {
+  const trips = await getTrips();
+  return trips.flatMap((trip, index) =>
+    photosOf(trip).map((open) => ({
+      params: { trip: trip.id, photo: open.key },
+      props: { trip, index, total: trips.length, next: trips[(index + 1) % trips.length], open },
+    })),
+  );
+}
+
+interface Props { trip: Trip; index: number; total: number; next: Trip; open: Photo }
+---
+<TripPage {...Astro.props} />

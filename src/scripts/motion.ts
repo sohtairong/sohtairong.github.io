@@ -256,3 +256,28 @@ document.addEventListener('click', (e) => {
 // If the visitor comes back with the browser's Back button, make sure nothing is left covering the page.
 document.addEventListener('astro:page-load', () => { teleporting = false; document.querySelectorAll('.teleport').forEach((el) => el.remove()); });
 window.addEventListener('pageshow', () => { teleporting = false; document.querySelectorAll('.teleport').forEach((el) => el.remove()); });
+
+// --- 7. Carousel pause ---------------------------------------------------------------
+// The Pause / Play button on the home page rows stops or restarts all of them, and the choice is remembered.
+function carouselsPaused() { return document.documentElement.classList.contains('carousels-paused'); }
+function labelCarouselButtons() {
+  const paused = carouselsPaused();
+  document.querySelectorAll<HTMLButtonElement>('[data-carousel-toggle]').forEach((btn) => {
+    btn.textContent = paused ? 'Play' : 'Pause';
+    btn.setAttribute('aria-pressed', String(paused));
+    btn.setAttribute('aria-label', paused ? 'Play the moving photo rows' : 'Pause the moving photo rows');
+  });
+}
+document.addEventListener('click', (e) => {
+  if (!(e.target as Element | null)?.closest('[data-carousel-toggle]')) return;
+  const paused = document.documentElement.classList.toggle('carousels-paused');
+  try { localStorage.setItem('carousels', paused ? 'paused' : 'playing'); } catch { /* private window: lasts for this visit only */ }
+  labelCarouselButtons();
+});
+function restoreCarousels() {
+  try { document.documentElement.classList.toggle('carousels-paused', localStorage.getItem('carousels') === 'paused'); } catch { /* no storage */ }
+  labelCarouselButtons();
+}
+document.addEventListener('astro:after-swap', restoreCarousels);
+document.addEventListener('astro:page-load', restoreCarousels);
+

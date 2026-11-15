@@ -2,11 +2,21 @@
 // Full-screen photo viewer for trip pages.
 // Opens when a photo is clicked. Arrow keys, the on-screen arrows or a swipe move
 // through the trip; Esc, the Close button or a click outside the photo closes it.
+// Pinch, or double-tap / double-click, zooms in; drag to look around.
+// While a photo is open the address bar shows that photo's own address, and Share copies it.
+interface Props {
+  /** The trip page's address, e.g. /places/2026-03-usa/ */ base: string;
+  /** Key of a photo to open straight away (used by the per-photo pages). */ open?: string;
+}
+const { base, open } = Astro.props;
 ---
-<dialog class="lb" aria-label="Photo viewer">
+<dialog class="lb" aria-label="Photo viewer" data-base={base} data-open={open}>
   <div class="lb-top">
     <span class="lb-count" aria-live="polite"></span>
-    <button class="lb-btn lb-close" type="button">Close ✕</button>
+    <span class="lb-tools">
+      <button class="lb-btn lb-share" type="button">Share</button>
+      <button class="lb-btn lb-close" type="button">Close ✕</button>
+    </span>
   </div>
   <figure class="lb-stage">
     <div class="lb-frame"><img class="lb-img" alt="" /></div>
@@ -49,6 +59,10 @@
   .lb-btn:focus-visible { outline: 2px solid var(--lb-ink); outline-offset: 2px; }
   .lb-btn:disabled { color: #5c5c58; cursor: default; }
   .lb-close { margin-right: -12px; }
+  .lb-tools { display: flex; gap: 4px; }
+  .lb-frame { touch-action: none; }
+  .lb-img { transform-origin: center; cursor: zoom-in; }
+  .lb-img.zoomed { cursor: grab; }
   .lb-prev { margin-left: -12px; }
   .lb-next { margin-right: -12px; }
 
@@ -77,16 +91,84 @@
   let index = 0;
   let opened = 0;
   let touchX: number | null = null;
+  let zoom = { scale: 1, x: 0, y: 0 };
+  let gestured = false; // a pinch or pan just happened, so the lift-off isn't a swipe
 
   const thumbs = () => [...document.querySelectorAll<HTMLButtonElement>('button[data-lb]')];
   const dialog = () => document.querySelector<HTMLDialogElement>('dialog.lb');
   const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pad = (n: number) => String(n).padStart(2, '0');
 
+  // ---- Zoom: pinch, double-tap or double-click; drag to look around ----
+  function applyZoom(next: Partial<typeof zoom>) {
+    const img = dialog()?.querySelector<HTMLElement>('.lb-img');
+    if (!img) return;
+    zoom = { ...zoom, ...next };
+    zoom.scale = Math.max(1, Math.min(4, zoom.scale));
+    // Keep the photo from being dragged out of view.
+    const maxX = (img.offsetWidth * (zoom.scale - 1)) / 2, maxY = (img.offsetHeight * (zoom.scale - 1)) / 2;
+    zoom.x = Math.max(-maxX, Math.min(maxX, zoom.x));
+    zoom.y = Math.max(-maxY, Math.min(maxY, zoom.y));
+    img.style.transform = zoom.scale === 1 ? '' : `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`;
+    img.classList.toggle('zoomed', zoom.scale > 1);
+  }
+  const resetZoom = () => applyZoom({ scale: 1, x: 0, y: 0 });
+
+  const points = new Map<number, { x: number; y: number }>();
+  let pinchStart = 0, scaleStart = 1, lastTap = 0;
+  const inFrame = (e: Event) => dialog()?.open && (e.target as Element | null)?.closest?.('.lb-frame');
+  const spread = () => { const [a, b] = [...points.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!inFrame(e)) return;
+    points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (points.size === 2) { pinchStart = spread(); scaleStart = zoom.scale; gestured = true; }
+    if (points.size === 1 && e.pointerType !== 'mouse') {
+      // Double-tap toggles the zoom.
+      if (e.timeStamp - lastTap < 300) { applyZoom(zoom.scale > 1 ? { scale: 1, x: 0, y: 0 } : { scale: 2.5 }); gestured = true; lastTap = 0; }
+      else lastTap = e.timeStamp;
+    }
+  });
+  document.addEventListener('pointermove', (e) => {
+    const before = points.get(e.pointerId);
+    if (!before) return;
+    points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (points.size === 2 && pinchStart) applyZoom({ scale: scaleStart * (spread() / pinchStart) });
+    else if (points.size === 1 && zoom.scale > 1) { applyZoom({ x: zoom.x + e.clientX - before.x, y: zoom.y + e.clientY - before.y }); gestured = true; }
+  });
+  for (const type of ['pointerup', 'pointercancel'] as const) {
+    document.addEventListener(type, (e) => { points.delete(e.pointerId); if (points.size < 2) pinchStart = 0; });
+  }
+  document.addEventListener('dblclick', (e) => {
+    if (!inFrame(e) || !(e.target as Element).closest('.lb-img')) return;
+    applyZoom(zoom.scale > 1 ? { scale: 1, x: 0, y: 0 } : { scale: 2.5 });
+  });
+
+  // ---- The address bar follows the open photo, so the page can be shared as that photo ----
+  function setAddress(key?: string) {
+    const base = dialog()?.dataset.base;
+    if (!base) return;
+    const url = key ? `${base}${key}/` : base;
+    if (location.pathname !== url) history.replaceState(history.state, '', url);
+  }
+
+  async function share(btn: HTMLButtonElement) {
+    const url = location.href, title = dialog()?.querySelector('.lb-title')?.textContent || document.title;
+    const say = (text: string) => { btn.textContent = text; setTimeout(() => { btn.textContent = 'Share'; }, 2000); };
+    try {
+      // Phones get their own share sheet; computers copy the link.
+      if (navigator.share && window.matchMedia('(hover: none)').matches) await navigator.share({ title, url });
+      else { await navigator.clipboard.writeText(url); say('Link copied ✓'); }
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') say('Copy the address bar');
+    }
+  }
+
   function show(i: number) {
     const dlg = dialog();
     const list = thumbs();
     if (!dlg || !list.length) return;
+    resetZoom();
     index = Math.max(0, Math.min(list.length - 1, i));
     const thumb = list[index];
     const small = thumb.querySelector('img');
@@ -113,6 +195,8 @@
     dlg.querySelector('.lb-count')!.textContent = `${pad(index + 1)} / ${pad(list.length)}`;
     dlg.querySelector<HTMLButtonElement>('.lb-prev')!.disabled = index === 0;
     dlg.querySelector<HTMLButtonElement>('.lb-next')!.disabled = index === list.length - 1;
+
+    setAddress(thumb.dataset.key);
 
     // Warm up the neighbours so moving on feels instant.
     for (const n of [list[index + 1], list[index - 1]]) if (n?.dataset.full) new Image().src = n.dataset.full;
@@ -152,10 +236,12 @@
     const dlg = el.closest('dialog.lb');
     if (!dlg) return;
     if (el.closest('.lb-close')) return close();
+    const shareBtn = el.closest<HTMLButtonElement>('.lb-share');
+    if (shareBtn) return void share(shareBtn);
     if (el.closest('.lb-prev')) return show(index - 1);
     if (el.closest('.lb-next')) return show(index + 1);
     // A click on the dark area around the photo closes the viewer.
-    if (!el.closest('.lb-img, .lb-cap, .lb-btn')) close();
+    if (!el.closest('.lb-img, .lb-cap, .lb-btn') && zoom.scale === 1) close();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -172,15 +258,33 @@
     if (touchX === null) return;
     const dx = e.changedTouches[0].clientX - touchX;
     touchX = null;
+    // Not a swipe if the photo is zoomed in or was just pinched or dragged.
+    const wasGesture = gestured;
+    if (e.touches.length === 0) gestured = false;
+    if (wasGesture || zoom.scale > 1) return;
     if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
   }, { passive: true });
 
   // When the viewer closes, bring the page to the photo you ended on.
   document.addEventListener('close', (e) => {
     if (!(e.target instanceof HTMLDialogElement) || !e.target.classList.contains('lb')) return;
+    resetZoom();
+    setAddress();
     if (index === opened) return;
     const thumb = thumbs()[index];
     thumb?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
     thumb?.focus({ preventScroll: true });
   }, true);
+
+  // A photo's own page (/places/<trip>/<photo>/) arrives with that photo already open.
+  document.addEventListener('astro:page-load', () => {
+    const dlg = dialog();
+    const key = dlg?.dataset.open;
+    if (!dlg || !key || dlg.open) return;
+    const i = thumbs().findIndex((t) => t.dataset.key === key);
+    if (i < 0) return;
+    opened = -1; // so closing brings the page to this photo
+    show(i);
+    dlg.showModal();
+  });
 </script>

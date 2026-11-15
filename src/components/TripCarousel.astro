@@ -17,7 +17,10 @@ const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720
       <span class="label">{dateLabel(trip)} · {trip.data.photos.length} photos</span>
       <span>{trip.data.country}</span>
     </h2>
-    <a class="label see" href={`/places/${trip.id}/`}>See all<span class="sr-only"> photos from {label}</span> →</a>
+    <span class="tools">
+      <button class="label pause" type="button" data-carousel-toggle aria-pressed="false">Pause</button>
+      <a class="label see" href={`/places/${trip.id}/`}>See all<span class="sr-only"> photos from {label}</span> →</a>
+    </span>
   </div>
   <div class="marquee" role="region" aria-label={`Photos from ${label}`} tabindex="0">
     <div class:list={['track', { rev: reverse }]}>
@@ -34,7 +37,16 @@ const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720
   h2 .label { font-weight: 400; letter-spacing: 0.06em; }
   .see { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; padding-block: 12px; }
 
+  .tools { display: flex; align-items: center; gap: 8px 24px; }
+  .pause { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink-muted); cursor: pointer; }
+  .pause:hover { color: var(--ink); }
+  .pause:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+
   .marquee { overflow: hidden; }
+  /* Paused (the Pause button, remembered for next time): the rows stand still and can be swiped or scrolled by hand. */
+  :global(html.carousels-paused) .track { animation-play-state: paused; }
+  :global(html.carousels-paused) .marquee { overflow-x: auto; scrollbar-width: none; }
+  :global(html.carousels-paused) .marquee::-webkit-scrollbar { display: none; }
   .marquee:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
   .track { display: flex; width: max-content; animation: slide-left var(--carousel-speed) linear infinite; }
   .track.rev { animation-name: slide-right; }
@@ -48,5 +60,6 @@ const card = { fit: 'crop' as const, widths: [480, 720], sizes: '(max-width: 720
   @media (prefers-reduced-motion: reduce) {
     .track { animation: none; }
     .marquee { overflow-x: auto; }
+    .pause { display: none; }
   }
 </style>
