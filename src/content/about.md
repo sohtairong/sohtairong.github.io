@@ -19,6 +19,7 @@ alsoVisited:
   - "Australia"
   - "Canada"
   - "Taiwan"
+  - "Germany"
 roles:
   - role: "Software Engineer"
     org: "Tessal8"
