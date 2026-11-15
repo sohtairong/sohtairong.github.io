@@ -114,7 +114,7 @@ photos:
     featured: true
   - src: "./photos/2bf19b0a-6d67-4c1a-82a7-927e5e0529e3-1-102-o.jpg"
     title: "The sole explorers"
-    story: "Nothing beats exploring with your partner in a cold cold day."
+    story: "Nothing beats exploring the world with your partner on a cold, cold day."
     city: "Trondheim"
     featured: true
   - src: "./photos/945ad770-e6a1-4e20-b47d-23b654f83a2b-1-102-o.jpg"
