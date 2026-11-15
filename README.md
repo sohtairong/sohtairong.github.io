@@ -210,6 +210,7 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 - **Teleport:** clicking a place on the map (or in the list beside it) zooms the map into that spot, shows the place name, then opens the trip. `ZOOM` and `DIVE_MS` at the end of `src/scripts/motion.ts` set how far and how long.
 - **Smooth scrolling:** with a mouse wheel or trackpad the page glides to a stop. `EASE` in `src/scripts/motion.ts` sets the feel (higher is snappier).
 - **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it.
+- **The lines at the top:** the large line comes into focus one word at a time and the smaller line slides in after it. As you scroll away, the two lines lift at different speeds and fade. The timings are at the end of the styles in `src/components/Intro.astro`.
 - **Arrival motion:** photos fade in as you scroll to them, and the top photo on the home page drifts slowly as you scroll away.
 
 All of it switches off for visitors whose device is set to reduce motion. The code is in `src/scripts/motion.ts`, `src/components/PhotoGrid.astro` (tiles and captions; the tiling itself is worked out in `src/lib/grid.ts`), `src/components/Lightbox.astro` and the end of `src/styles/global.css`.

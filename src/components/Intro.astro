@@ -28,6 +28,7 @@ const plainHeadline = headline.replace(/\*/g, '');
 const starred = /\*(.+?)\*/.exec(headline);
 const backWords = (starred ? headline.slice(0, starred.index) : headline).replace(/\*/g, '').trim();
 const frontWords = starred ? starred[1].trim() : '';
+const bigWords = backWords.split(/\s+/).filter(Boolean); // animated in one word at a time
 ---
 <section class:list={['hero', { 'has-photo': hero }]}>
   {hero && (
@@ -43,8 +44,12 @@ const frontWords = starred ? starred[1].trim() : '';
   <style is:inline set:html={fontFaces(bigFont, smallFont)}></style>
   <div class="wrap"><div class="words">
     <h1 class="sr-only">{plainHeadline}</h1>
-    {backWords && <p class="big" style={fontStyle(bigFont)} aria-hidden="true">{backWords}</p>}
-    {frontWords && <p class="small" style={fontStyle(smallFont)} aria-hidden="true">{frontWords}</p>}
+    {backWords && (
+      <p class="big" style={fontStyle(bigFont)} aria-hidden="true">
+        {bigWords.map((word, i) => <Fragment><span class="word" style={`--i:${i}`}>{word}</span>{' '}</Fragment>)}
+      </p>
+    )}
+    {frontWords && <p class="small" style={`${fontStyle(smallFont)};--i:${bigWords.length}`} aria-hidden="true"><span>{frontWords}</span></p>}
   </div></div>
 </section>
 
@@ -88,7 +93,9 @@ const frontWords = starred ? starred[1].trim() : '';
   /* The photo drifts slowly as you scroll away (only in browsers that support it, and not with reduced motion). */
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: scroll()) {
-      .bg { animation: hero-drift linear both; animation-timeline: scroll(root block); animation-range: 0 900px; }
+      .bg { animation: hero-drift linear both; }
+      /* Kept as a separate rule on purpose: when the build merges the timeline into the line above, browsers ignore it. */
+      .backdrop .bg { animation-timeline: scroll(root block); animation-range: 0 900px; }
     }
   }
   @keyframes hero-drift { to { transform: translateY(10%) scale(1.06); } }
@@ -111,6 +118,24 @@ const frontWords = starred ? starred[1].trim() : '';
     font-size: calc(clamp(20px, 2.9vw, 46px) * var(--scale, 1)); line-height: 1.04;
     text-shadow: 0 2px 22px rgba(0, 0, 0, 0.4);
   }
+  /* ---- Motion (never with reduced motion) ---- */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Arriving: the large line comes into focus one word at a time, then the smaller line slides in. */
+    .word { display: inline-block; animation: word-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.15s + var(--i) * 0.11s); }
+    .small > span { display: inline-block; animation: line-in 1s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.45s + var(--i) * 0.11s); }
+    /* Scrolling away: the two lines lift at different speeds and fade, so the words seem to float off the photo. */
+    @supports (animation-timeline: scroll()) {
+      .big { animation: big-away linear both; }
+      .small { animation: small-away linear both; }
+      /* Separate rule on purpose (see the note on the photo's drift above). */
+      .words .big, .words .small { animation-timeline: scroll(root block); animation-range: 0 620px; }
+    }
+  }
+  @keyframes word-in { from { opacity: 0; transform: translateY(0.38em) rotate(2deg); filter: blur(10px); } }
+  @keyframes line-in { from { opacity: 0; transform: translateX(28px); filter: blur(6px); } }
+  @keyframes big-away { to { transform: translateY(-70px); opacity: 0; filter: blur(6px); } }
+  @keyframes small-away { to { transform: translateY(-150px); opacity: 0; } }
+
   @media (max-width: 720px) {
     .words { --big: 17vw; }
     .small { font-size: calc(7.4vw * var(--scale, 1)); max-width: 12ch; }

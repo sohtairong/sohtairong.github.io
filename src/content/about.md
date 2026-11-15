@@ -3,7 +3,7 @@
 name: "Tai Rong"
 headline: "Adventures, memories and love. *These are the things we live for.*"
 intro: "Shot on iPhone, between flights, hikes and on long walks. Each place has its own page with the stories behind the pictures."
-headlineFont: "bebas"
+headlineFont: "inter-tight"
 lineFont: "dm-serif"
 hero: "./hero.jpg"
 heroCaption: "‎⁨Vikhammer⁩, ⁨Central Norway⁩, ⁨Norway⁩, May 2026"
