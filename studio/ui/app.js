@@ -99,7 +99,7 @@ let changesTimer;
 function refreshChanges() {
   clearTimeout(changesTimer);
   changesTimer = setTimeout(async () => {
-    try { S.changes = await api('GET', '/api/changes'); renderPublishButton(); } catch { /* shown elsewhere */ }
+    try { S.changes = await api('GET', '/api/changes'); renderPublishButton(); renderStorage(); } catch { /* shown elsewhere */ }
   }, 400);
 }
 
@@ -187,11 +187,33 @@ function renderPublishButton() {
   $('#publish-btn').title = n ? 'Send your changes to the live site' : 'Nothing new to publish';
 }
 
+// How much of GitHub's 1 GB the project uses, shown at the bottom of the side panel.
+function renderStorage() {
+  const s = S.changes?.storage, el = $('#storage');
+  if (!el) return;
+  if (!s) { el.hidden = true; return; }
+  const size = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(2)} GB` : b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(b < 10 * 1024 ** 2 ? 1 : 0)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+  const share = s.used / s.limit, pct = Math.min(100, Math.max(1, Math.round(share * 100)));
+  const photos = S.trips.reduce((n, t) => n + t.photos.length, 0);
+  const level = share >= 0.9 ? 'full' : share >= 0.7 ? 'high' : '';
+  const room = photos >= 5 && s.content > 0 ? Math.max(0, Math.floor((s.limit - s.used) / (s.content / photos))) : null;
+  const note = level === 'full' ? 'Nearly full. Remove photos you don’t need, or ask about moving photos to other storage.'
+    : level === 'high' ? 'Getting full. Worth thinning out photos you don’t need.'
+    : room !== null ? `Room for about ${room.toLocaleString()} more photos at your current average.` : 'Plenty of room.';
+  el.hidden = false;
+  el.className = `storage ${level}`;
+  el.title = `Photos and text now: ${size(s.content)}. Including earlier versions and removed photos that GitHub still keeps: ${size(s.history)}. GitHub asks that a project stays under about 1 GB. Cropped photos count twice because the original is kept.`;
+  el.innerHTML = `<span class="storage-top"><span>Storage</span><span>${size(s.used)} of 1 GB</span></span>
+    <span class="meter" role="progressbar" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></span>
+    <span class="storage-note">${note}</span>`;
+}
+
 function renderChrome() {
   $('#brand-name').textContent = S.about.name ? ` · ${S.about.name}` : '';
   $('#side-foot').innerHTML = S.site ? `Live site: <a href="${h(S.site)}" target="_blank" rel="noopener">${h(S.site.replace(/^https?:\/\//, ''))}</a>` : '';
   renderSide();
   renderPublishButton();
+  renderStorage();
   refreshHeaderLinks();
 }
 
@@ -603,9 +625,30 @@ function imageSlot({ which, has, label, emptyText, tall = false }) {
   return `<div class="image-slot">
     <div class="preview ${tall ? 'tall' : ''}" data-slot="${which}">${has ? `<img src="/media/${which}.jpg?w=640&t=${Date.now()}" alt="">` : h(emptyText)}</div>
     <div class="rows">
-      <div class="head-actions"><button class="btn small" type="button" data-act="pick-${which}">${has ? 'Replace…' : 'Choose a photo…'}</button>${which === 'hero' && has ? '<button class="btn small" type="button" data-act="remove-hero">Remove</button>' : ''}</div>
-      <span class="help muted">Or drop a photo onto the picture. ${h(label)}</span>
+      <div class="head-actions"><button class="btn small" type="button" data-act="pick-${which}">${has ? 'Replace…' : 'Choose a photo…'}</button>${(which === 'hero' || which === 'cutout') && has ? `<button class="btn small" type="button" data-act="remove-${which}">Remove</button>` : ''}</div>
+      <span class="help muted">Or drop a ${which === 'cutout' ? 'picture' : 'photo'} onto the picture. ${h(label)}</span>
     </div></div>`;
+}
+
+// Font choices for the two lines at the top of the home page, previewed in the real fonts.
+function fontSelect(field, current) {
+  return `<select id="a-${field}" data-a="${field}">${(S.fonts || []).map((f) => `<option value="${h(f.id)}" ${f.id === current ? 'selected' : ''}>${h(f.label)}</option>`).join('')}</select>`;
+}
+function loadFonts() {
+  if ($('#studio-fonts') || !(S.fonts || []).length) return;
+  const style = document.createElement('style');
+  style.id = 'studio-fonts';
+  style.textContent = [...new Map(S.fonts.map((f) => [f.file, f])).values()].map((f) => `@font-face{font-family:'${f.family}';font-style:${f.style};font-weight:${f.weight};src:url('/fonts/${f.file}') format('woff2')}`).join('');
+  document.head.append(style);
+}
+function renderFontPreview() {
+  const box = $('#font-preview');
+  if (!box) return;
+  const a = S.about, pick = (id, fallback) => (S.fonts || []).find((f) => f.id === (id || fallback));
+  const star = /\*(.+?)\*/.exec(a.headline);
+  const big = (star ? a.headline.slice(0, star.index) : a.headline).replace(/\*/g, '').trim(), small = star ? star[1].trim() : '';
+  const css = (f, size) => (f ? `font-family:'${f.family}',${f.fallback};font-style:${f.style};font-weight:${f.weight};letter-spacing:${f.tracking};text-transform:${f.caps ? 'uppercase' : 'none'};font-size:${Math.round(size * f.scale)}px` : '');
+  box.innerHTML = `<span class="fp-big" style="${css(pick(a.headlineFont, 'instrument-serif-italic'), 54)}">${h(big)}</span>${small ? `<span class="fp-small" style="${css(pick(a.lineFont, 'inter-tight-caps'), 20)}">${h(small)}</span>` : ''}`;
 }
 
 function renderSite() {
@@ -618,13 +661,16 @@ function renderSite() {
       <div class="grid">
         <div class="f"><span class="label">Big photo behind the top</span>
           ${imageSlot({ which: 'hero', has: !!a.hero, label: 'A wide landscape photo works best.', emptyText: newest ? `Using the first carousel photo from ${newest.country}` : 'No photo yet' })}</div>
-        <div class="f s6"><label for="a-heroCaption">Caption on the photo (optional)</label><input id="a-heroCaption" type="text" data-a="heroCaption" value="${h(a.heroCaption)}" placeholder="Kyoto, March 2025"></div>
-        <div class="f"><label for="a-headline">Headline</label><input id="a-headline" type="text" data-a="headline" value="${h(a.headline)}">
-          <span class="help">Put *asterisks* around words to show them in grey italic.</span></div>
-        <div class="f"><label for="a-intro">Line under the headline</label><textarea id="a-intro" data-a="intro" rows="2">${h(a.intro)}</textarea></div>
-        <div class="f"><span class="label">Your portrait</span>
+        <div class="f s6"><label for="a-heroCaption">Where the top photo was taken (not shown; describes the photo for screen readers)</label><input id="a-heroCaption" type="text" data-a="heroCaption" value="${h(a.heroCaption)}" placeholder="Kyoto, March 2025"></div>
+        <div class="f"><label for="a-headline">Your line</label><input id="a-headline" type="text" data-a="headline" value="${h(a.headline)}">
+          <span class="help">The first part is the large line. Put *asterisks* around the part that should be the smaller line at the bottom right.</span></div>
+        <div class="f s6"><label for="a-headlineFont">Font for the large line</label>${fontSelect('headlineFont', a.headlineFont || 'instrument-serif-italic')}</div>
+        <div class="f s6"><label for="a-lineFont">Font for the smaller line</label>${fontSelect('lineFont', a.lineFont || 'inter-tight-caps')}</div>
+        <div class="f"><div class="font-preview" id="font-preview" aria-hidden="true"></div></div>
+        <div class="f"><label for="a-intro">Sentence under “Where I’ve been”</label><textarea id="a-intro" data-a="intro" rows="2">${h(a.intro)}</textarea></div>
+        <div class="f"><span class="label">Your portrait (shown in the About section)</span>
           ${imageSlot({ which: 'portrait', has: !!a.portrait, label: 'A portrait-shaped photo (taller than wide) works best.', emptyText: 'No portrait yet', tall: true })}</div>
-        <div class="f s6"><label for="a-portraitCaption">Caption under the portrait (optional)</label><input id="a-portraitCaption" type="text" data-a="portraitCaption" value="${h(a.portraitCaption)}" placeholder="Me, Norway, June 2024"></div>
+        <div class="f s6"><label for="a-portraitCaption">What the portrait shows (not shown; for screen readers)</label><input id="a-portraitCaption" type="text" data-a="portraitCaption" value="${h(a.portraitCaption)}" placeholder="Me, Norway, June 2024"></div>
       </div>
     </section>
 
@@ -648,6 +694,8 @@ function renderSite() {
       <datalist id="country-list">${countryOptions()}</datalist>
     </section>`;
   $$('textarea', main).forEach(autosize);
+  loadFonts();
+  renderFontPreview();
 }
 
 function rowsHtml(kind) {
@@ -673,7 +721,7 @@ async function setImage(which, file) {
   if (!file) return;
   if (!IMAGE.test(file.name)) { toast('That isn’t a photo Studio can use.', { bad: true }); return; }
   await flush();
-  toast(which === 'hero' ? 'Preparing the top photo…' : 'Preparing your portrait…', { ms: 2500 });
+  toast(which === 'hero' ? 'Preparing the top photo…' : which === 'cutout' ? 'Preparing your cut-out…' : 'Preparing your portrait…', { ms: 2500 });
   try {
     const r = await api('POST', `/api/about/${which}?name=${encodeURIComponent(file.name)}`, file, { raw: true });
     S.about = r.about;
@@ -767,7 +815,7 @@ main.addEventListener('input', (e) => {
     t.photos[i][el.dataset.p] = el.value;
     return touch(t.id);
   }
-  if (el.dataset.a) { S.about[el.dataset.a] = el.value; if (el.dataset.a === 'name') $('#brand-name').textContent = el.value ? ` · ${el.value}` : ''; return touch('about'); }
+  if (el.dataset.a) { S.about[el.dataset.a] = el.value; if (['headline', 'headlineFont', 'lineFont'].includes(el.dataset.a)) renderFontPreview(); if (el.dataset.a === 'name') $('#brand-name').textContent = el.value ? ` · ${el.value}` : ''; return touch('about'); }
   if (el.dataset.k) {
     const row = el.closest('[data-row]');
     S.about[row.dataset.row][Number(row.dataset.i)][el.dataset.k] = el.value;
@@ -800,7 +848,17 @@ main.addEventListener('click', async (e) => {
     if (act === 'pick-folder') return addPhotos(t, await pickFiles({ folder: true }));
     if (act === 'delete-trip') return deleteTrip(t);
   }
-  if (act === 'pick-hero' || act === 'pick-portrait') return setImage(act.slice(5), (await pickFiles())[0]);
+  if (act === 'pick-hero' || act === 'pick-portrait' || act === 'pick-cutout') return setImage(act.slice(5), (await pickFiles())[0]);
+  if (act === 'remove-cutout') {
+    await flush();
+    try {
+      const r = await api('DELETE', '/api/about/cutout'); S.about = r.about; renderSite(); refreshChanges();
+      toast('Removed. Your portrait is used instead.', r.undo && { action: 'Undo', onAction: async () => {
+        try { await api('POST', '/api/undo', r.undo); S.about.cutout = 'cutout.webp'; await save('about'); await load({ kind: 'site' }); } catch (err) { toast(err.message, { bad: true }); }
+      } });
+    } catch (err) { toast(err.message, { bad: true }); }
+    return;
+  }
   if (act === 'remove-hero') {
     await flush();
     try {

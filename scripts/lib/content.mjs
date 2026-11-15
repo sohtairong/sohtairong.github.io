@@ -147,10 +147,13 @@ export async function readAbout() {
   return {
     name: str(data.name),
     headline: str(data.headline),
+    headlineFont: str(data.headlineFont),
+    lineFont: str(data.lineFont),
     intro: str(data.intro),
     hero: typeof data.hero === 'string' && (await exists(path.join(CONTENT, data.hero))) ? path.basename(data.hero) : '',
     heroCaption: str(data.heroCaption),
     portrait: typeof data.portrait === 'string' && (await exists(path.join(CONTENT, data.portrait))) ? path.basename(data.portrait) : '',
+    cutout: typeof data.cutout === 'string' && (await exists(path.join(CONTENT, data.cutout))) ? path.basename(data.cutout) : '',
     portraitCaption: str(data.portraitCaption),
     email: str(data.email),
     instagram: str(data.instagram),
@@ -169,9 +172,12 @@ export async function writeAbout(a) {
   if (!str(a.name).trim()) throw new Error('Your name can’t be empty.');
   if (!str(a.headline).trim()) throw new Error('The headline can’t be empty.');
   const data = { name: a.name.trim(), headline: a.headline.trim(), intro: str(a.intro).trim() };
+  if (/^[a-z0-9-]{1,60}$/.test(str(a.headlineFont))) data.headlineFont = a.headlineFont;
+  if (/^[a-z0-9-]{1,60}$/.test(str(a.lineFont))) data.lineFont = a.lineFont;
   if (a.hero && (await exists(path.join(CONTENT, 'hero.jpg')))) data.hero = './hero.jpg';
   if (str(a.heroCaption).trim()) data.heroCaption = a.heroCaption.trim();
   if (await exists(path.join(CONTENT, 'portrait.jpg'))) data.portrait = './portrait.jpg';
+  if (a.cutout !== '' && (await exists(path.join(CONTENT, 'cutout.webp')))) data.cutout = './cutout.webp';
   if (str(a.portraitCaption).trim()) data.portraitCaption = a.portraitCaption.trim();
   if (str(a.email).trim()) data.email = a.email.trim();
   if (str(a.instagram).trim()) {

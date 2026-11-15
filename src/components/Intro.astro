@@ -1,14 +1,20 @@
 ---
-// Top of the home page: a full-width travel photo with the menu, portrait,
-// headline and list of places laid over it.
+// Top of the home page: a full-width, slightly blurred travel photo with the menu above, the first
+// sentence of your line in large type, and the *starred* part of it at the bottom right.
+// Your portrait is in the About section; the intro sentence sits under “Where I’ve been”.
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import Header from './Header.astro';
 import { dateLabel, featuredOf, type Trip } from '../lib/trips';
+import { fontChoice, fontFaces, fontStyle, DEFAULT_HEADLINE_FONT, DEFAULT_LINE_FONT } from '../lib/fonts';
 
 interface Props { about: CollectionEntry<'about'>; trips: Trip[] }
 const { about, trips } = Astro.props;
-const { headline, intro, portrait, portraitCaption, name, instagram } = about.data;
+const { headline, name, instagram } = about.data;
+
+// The fonts chosen in Studio for the two lines.
+const bigFont = fontChoice(about.data.headlineFont, DEFAULT_HEADLINE_FONT);
+const smallFont = fontChoice(about.data.lineFont, DEFAULT_LINE_FONT);
 
 // The hero photo: the one set in about.md, otherwise the newest trip's first featured photo.
 const newest = trips[0];
@@ -17,10 +23,11 @@ const hero = about.data.hero ?? fallback?.src;
 const heroCaption = about.data.heroCaption
   ?? (about.data.hero ? undefined : fallback && newest ? [fallback.city || newest.data.country, dateLabel(newest)].join(', ') : undefined);
 
-// "*word*" in the headline becomes muted italic emphasis.
-const headlineHtml = headline
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-  .replace(/\*(.+?)\*/g, '<em>$1</em>');
+// The first part of the headline is the large line; the *starred* part is the smaller line.
+const plainHeadline = headline.replace(/\*/g, '');
+const starred = /\*(.+?)\*/.exec(headline);
+const backWords = (starred ? headline.slice(0, starred.index) : headline).replace(/\*/g, '').trim();
+const frontWords = starred ? starred[1].trim() : '';
 ---
 <section class:list={['hero', { 'has-photo': hero }]}>
   {hero && (
@@ -33,22 +40,12 @@ const headlineHtml = headline
 
   <Header name={name} instagram={instagram} />
 
-  <div class="wrap intro">
-    <div class="lead">
-      <figure class="portrait">
-        {portrait
-          ? <Image src={portrait} alt={`Portrait of ${name}`} widths={[400, 640, 900]} sizes="(min-width: 1100px) 320px, (min-width: 720px) 40vw, 100vw" loading="eager" />
-          : <div class="ph label">Photo of you</div>}
-        {portraitCaption && <figcaption class="label">{portraitCaption}</figcaption>}
-      </figure>
-      <div class="text">
-        <h1 class="display" set:html={headlineHtml} />
-        <p>{intro}</p>
-      </div>
-    </div>
-  </div>
-
-  {hero && heroCaption && <p class="wrap credit label">↳ {heroCaption}</p>}
+  <style is:inline set:html={fontFaces(bigFont, smallFont)}></style>
+  <div class="wrap"><div class="words">
+    <h1 class="sr-only">{plainHeadline}</h1>
+    {backWords && <p class="big" style={fontStyle(bigFont)} aria-hidden="true">{backWords}</p>}
+    {frontWords && <p class="small" style={fontStyle(smallFont)} aria-hidden="true">{frontWords}</p>}
+  </div></div>
 </section>
 
 <style>
@@ -81,9 +78,12 @@ const headlineHtml = headline
   }
   /* What follows the hero sits on top of the fading photo. */
   .hero.has-photo + :global(*) { position: relative; margin-top: calc(clamp(90px, 14vw, 180px) * 0.5); }
+  /* A slight blur keeps the photo as atmosphere, so the words stay the subject.
+     It is drawn a little larger than its box so the blur has no soft edges. */
   .bg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%; max-width: none; object-fit: cover;
+    position: absolute; inset: -24px;
+    width: calc(100% + 48px); height: calc(100% + 48px); max-width: none; object-fit: cover;
+    filter: blur(7px);
   }
   /* The photo drifts slowly as you scroll away (only in browsers that support it, and not with reduced motion). */
   @media (prefers-reduced-motion: no-preference) {
@@ -100,26 +100,19 @@ const headlineHtml = headline
       rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.72) 100%);
   }
 
-  .intro {
-    align-self: end;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 48px; align-items: start; padding-block: clamp(96px, 16vh, 180px) 32px;
+  /* ---- The words: one large line, and a smaller one at the bottom right. Their fonts are chosen in Studio. ---- */
+  .words { --big: clamp(54px, 10.6vw, 168px); display: grid; gap: clamp(28px, 7vh, 88px); padding-block: clamp(28px, 8vh, 96px) clamp(20px, 4vh, 44px); }
+  .big {
+    margin: 0; font-size: calc(var(--big) * var(--scale, 1)); line-height: 0.94; text-wrap: balance;
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.28);
   }
-  .lead { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 24px 40px; align-items: end; max-width: 860px; }
-  .portrait { margin: 0; display: grid; gap: 10px; }
-  .portrait :global(img), .ph { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--placeholder); }
-  .has-photo .portrait :global(img), .has-photo .ph { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
-  .ph { display: grid; place-items: center; color: var(--placeholder-ink); text-shadow: none; }
-  figcaption { text-transform: none; letter-spacing: 0; }
-  .text { display: grid; gap: 16px; }
-  h1 { font-size: clamp(36px, 4.6vw, 64px); line-height: 1; text-wrap: balance; }
-  h1 :global(em) { color: var(--ink-muted); }
-  .text p { margin: 0; max-width: 40ch; font-size: 17px; color: var(--ink-muted); }
-  .credit { margin-block: 0; padding-bottom: 20px; text-align: right; text-transform: none; letter-spacing: 0; }
-
+  .small {
+    margin: 0; justify-self: end; max-width: 15ch; text-align: right; text-wrap: balance;
+    font-size: calc(clamp(20px, 2.9vw, 46px) * var(--scale, 1)); line-height: 1.04;
+    text-shadow: 0 2px 22px rgba(0, 0, 0, 0.4);
+  }
   @media (max-width: 720px) {
-    .intro { grid-template-columns: minmax(0, 1fr); padding-top: 72px; }
-    .lead { grid-template-columns: minmax(0, 1fr); align-items: start; }
-    .portrait { max-width: 220px; }
+    .words { --big: 17vw; }
+    .small { font-size: calc(7.4vw * var(--scale, 1)); max-width: 12ch; }
   }
 </style>

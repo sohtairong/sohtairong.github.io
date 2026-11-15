@@ -1,14 +1,21 @@
 ---
-// The short "off camera" section: bio, current roles and links.
+// The short "off camera" section: your portrait, bio, current roles and links.
+import { Image } from 'astro:assets';
 import { render, type CollectionEntry } from 'astro:content';
 interface Props { about: CollectionEntry<'about'> }
 const { about } = Astro.props;
 const { Content } = await render(about);
-const { roles, links, email } = about.data;
+const { roles, links, email, portrait, name, portraitCaption } = about.data;
 ---
-<section id="about" class="wrap" data-reveal><div class="about">
-  <h2 class="display">About</h2>
-  <div class="bio"><Content /></div>
+<section id="about" class="wrap" data-reveal><div class:list={['about', { 'with-portrait': portrait }]}>
+  {portrait && (
+    <Image class="portrait" src={portrait} alt={portraitCaption || `Portrait of ${name}`} widths={[320, 480, 640, 900]}
+      sizes="(min-width: 860px) 300px, 70vw" loading="lazy" />
+  )}
+  <div class="main">
+    <h2 class="display">About</h2>
+    <div class="bio"><Content /></div>
+  </div>
   <div class="side">
     {roles.length > 0 && (
       <p class="label by-day">By day</p>
@@ -27,6 +34,12 @@ const { roles, links, email } = about.data;
   .about {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 32px;
     margin-top: 48px; padding-block: 48px; border-top: 1px solid var(--ink);
+  }
+  .main { display: grid; gap: 20px; align-content: start; }
+  .portrait { width: min(300px, 70%); height: auto; aspect-ratio: 4 / 5; object-fit: cover; background: var(--placeholder); }
+  @media (min-width: 860px) {
+    .about.with-portrait { grid-template-columns: minmax(200px, 300px) minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px clamp(32px, 5vw, 72px); }
+    .portrait { width: 100%; }
   }
   h2 { font-size: 28px; line-height: 1.1; }
   .bio :global(p) { margin: 0 0 1em; max-width: 46ch; font-size: 17px; }

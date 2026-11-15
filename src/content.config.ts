@@ -51,6 +51,9 @@ const about = defineCollection({
     z.object({
       name: z.string(),
       headline: z.string(),
+      // Fonts for the large line and the smaller line at the top of the home page (ids from src/lib/fonts.json).
+      headlineFont: z.string().optional(),
+      lineFont: z.string().optional(),
       // Wrap the words to emphasise in *asterisks* — they render in muted italic.
       intro: z.string(),
       // Full-width photo behind the top of the home page. Leave out to use the newest trip's first featured photo.
@@ -58,6 +61,9 @@ const about = defineCollection({
       // Small credit line on the hero photo, e.g. "Kyoto, March 2025".
       heroCaption: z.string().optional(),
       portrait: image().optional(),
+      // A picture of you with the background removed (transparent). When set, the top of the home page
+      // uses the depth layout: big words behind you, more words in front.
+      cutout: image().optional(),
       portraitCaption: z.string().optional(),
       email: z.string().optional(),
       instagram: z.string().url().optional(),

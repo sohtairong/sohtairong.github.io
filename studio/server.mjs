@@ -71,7 +71,7 @@ async function thumbnail(file, width) {
   const stat = await fs.stat(file);
   const key = `${file}|${stat.mtimeMs}|${width}`;
   if (thumbCache.has(key)) return thumbCache.get(key);
-  const data = await sharp(file).rotate().resize({ width, withoutEnlargement: true }).jpeg({ quality: 72 }).toBuffer();
+  const data = await sharp(file).rotate().resize({ width, withoutEnlargement: true }).flatten({ background: '#807e78' }).jpeg({ quality: 72 }).toBuffer();
   if (thumbCache.size > 400) thumbCache.delete(thumbCache.keys().next().value);
   thumbCache.set(key, data);
   return data;
@@ -91,6 +91,25 @@ async function siteUrl() {
 async function countries() {
   try { return Object.keys(JSON.parse(await fs.readFile(path.join(ROOT, 'src/lib/countries.json'), 'utf8'))); }
   catch { return []; }
+}
+
+// ---------- how much of GitHub's space the project uses ----------
+
+async function folderSize(dir) {
+  let total = 0;
+  for (const entry of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) total += await folderSize(p);
+    else if (entry.isFile()) total += (await fs.stat(p).catch(() => ({ size: 0 }))).size;
+  }
+  return total;
+}
+
+const STORAGE_LIMIT = 1024 ** 3; // GitHub asks that a repository stays under about 1 GB
+/** `content` = photos and text as they are now; `history` = everything git keeps, including photos removed since. */
+async function storage() {
+  const [content, history] = await Promise.all([folderSize(CONTENT), folderSize(path.join(ROOT, '.git'))]);
+  return { content, history, used: Math.max(content, history), limit: STORAGE_LIMIT };
 }
 
 // ---------- what has changed since the last publish ----------
@@ -118,7 +137,7 @@ async function changes() {
       const label = trips.get(trip[1]) ? `${trips.get(trip[1])} (${trip[1].slice(0, 7)})` : `Trip ${trip[1]}`;
       if (trip[2].startsWith('photos/')) bump(label, kind === 'changed' ? 'other' : kind);
       else bump(label, 'text');
-    } else if (/^src\/content\/(about\.md|hero\.jpg|portrait\.jpg)$/.test(file)) bump('Home page and About', 'text');
+    } else if (/^src\/content\/(about\.md|hero\.jpg|portrait\.jpg|cutout\.webp)$/.test(file)) bump('Home page and About', 'text');
     else bump('Site design and settings', 'other');
   }
   const items = [...groups.values()].map((g) => {
@@ -215,8 +234,9 @@ function stopPreview() {
 // ---------- the API ----------
 
 async function state() {
-  const [trips, about, change, site, known] = await Promise.all([listTrips(), readAbout(), changes(), siteUrl(), countries()]);
-  return { trips, about, changes: change, site, countries: known, preview: previewUrl, actions: actionsUrl(change.remote) };
+  const [trips, about, change, site, known, space] = await Promise.all([listTrips(), readAbout(), changes(), siteUrl(), countries(), storage()]);
+  const fonts = JSON.parse(await fs.readFile(path.join(ROOT, 'src/lib/fonts.json'), 'utf8').catch(() => '[]'));
+  return { fonts, trips, about, changes: { ...change, storage: space }, site, countries: known, preview: previewUrl, actions: actionsUrl(change.remote) };
 }
 
 async function api(req, res, url) {
@@ -225,7 +245,7 @@ async function api(req, res, url) {
   const is = (m, ...shape) => method === m && parts.length === shape.length && shape.every((s, i) => s === '*' || s === parts[i]);
 
   if (is('GET', 'state')) return send(res, 200, await state());
-  if (is('GET', 'changes')) return send(res, 200, await changes());
+  if (is('GET', 'changes')) return send(res, 200, { ...(await changes()), storage: await storage() });
   if (is('GET', 'preview')) return send(res, 200, { running: await previewRunning(), url: previewUrl, log: previewLog.slice(-1500) });
 
   // Read the month a photo was taken, to pre-fill the "new trip" form.
@@ -324,6 +344,7 @@ async function api(req, res, url) {
       if (u.also && validFileName(u.also.file)) await restoreFromTrash(u.also.token, path.join(TRIPS, u.id, 'photos', u.also.file));
     }
     else if (u.kind === 'hero') await restoreFromTrash(u.token, path.join(CONTENT, 'hero.jpg'));
+    else if (u.kind === 'cutout') await restoreFromTrash(u.token, path.join(CONTENT, 'cutout.webp'));
     else throw new Problem('Nothing to undo.');
     return send(res, 200, { ok: true });
   }
@@ -344,6 +365,24 @@ async function api(req, res, url) {
     const about = await readAbout();
     await writeAbout({ ...about, hero: which === 'hero' ? 'hero.jpg' : about.hero });
     return send(res, 200, { about: await readAbout(), portraitShape: out.width >= out.height ? 'wide' : 'tall' });
+  }
+  // A cut-out of you (background removed) for the depth layout at the top of the home page.
+  if (is('POST', 'about', 'cutout')) {
+    const name = url.searchParams.get('name') || 'cutout.png';
+    let img, stats;
+    try { img = sharp(await readBody(req)).rotate(); stats = await img.clone().stats(); }
+    catch (e) { throw new Problem(`Couldn’t read “${name}”. Use a PNG picture with the background removed.\n(${e.message})`, 422); }
+    if (stats.isOpaque) throw new Problem('That picture still has its background. On a Mac: right-click the photo in Finder, choose Quick Actions > Remove Background, then use the new PNG it makes. On an iPhone: press and hold yourself in the photo, choose Share, and save it as an image.', 422);
+    const data = await img.trim().resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true }).webp({ quality: 90, alphaQuality: 95 }).toBuffer();
+    await fs.writeFile(path.join(CONTENT, 'cutout.webp'), data);
+    await writeAbout({ ...(await readAbout()), cutout: 'cutout.webp' });
+    return send(res, 200, { about: await readAbout() });
+  }
+  if (is('DELETE', 'about', 'cutout')) {
+    const from = path.join(CONTENT, 'cutout.webp');
+    const token = (await exists(from)) ? await trashPath(from, 'cutout.webp') : null;
+    await writeAbout({ ...(await readAbout()), cutout: '' });
+    return send(res, 200, { about: await readAbout(), undo: token ? { kind: 'cutout', token } : null });
   }
   if (is('POST', 'about', 'hero-from')) {
     const { trip, file } = await readJson(req);
@@ -389,6 +428,7 @@ async function serveMedia(res, url) {
   let file;
   if (parts[0] === 'trips' && parts.length === 3 && validTripId(parts[1]) && validFileName(parts[2])) file = path.join(TRIPS, parts[1], 'photos', parts[2]);
   else if (parts.length === 1 && (parts[0] === 'hero.jpg' || parts[0] === 'portrait.jpg')) file = path.join(CONTENT, parts[0]);
+  else if (parts.length === 1 && parts[0] === 'cutout.jpg') file = path.join(CONTENT, 'cutout.webp'); // previewed on grey
   if (!file || !(await exists(file))) throw new Problem('Not found', 404);
   const width = Math.min(2400, Math.max(80, Number(url.searchParams.get('w')) || 480));
   res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store' });
@@ -410,6 +450,13 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (req.method !== 'GET') throw new Problem('Not found', 404);
     if (url.pathname.startsWith('/media/')) return await serveMedia(res, url);
+    // The site's own font files, so Studio can show each font choice as it will look.
+    if (/^\/fonts\/[a-z0-9-]+\.woff2$/.test(url.pathname)) {
+      const data = await fs.readFile(path.join(ROOT, 'public', url.pathname)).catch(() => null);
+      if (!data) throw new Problem('Not found', 404);
+      res.writeHead(200, { 'content-type': 'font/woff2', 'cache-control': 'max-age=3600' });
+      return res.end(data);
+    }
     if (url.pathname === '/') return await serveUi(res, 'index.html');
     return await serveUi(res, url.pathname.slice(1));
   } catch (e) {

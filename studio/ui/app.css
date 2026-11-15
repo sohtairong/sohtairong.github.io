@@ -198,3 +198,20 @@ details.more[open] > summary { margin-bottom: 10px; }
 .crop-box i[data-h='ne'] { right: 0; top: 0; cursor: nesw-resize; }
 .crop-box i[data-h='sw'] { left: 0; bottom: 0; cursor: nesw-resize; }
 .crop-box i[data-h='se'] { right: 0; bottom: 0; cursor: nwse-resize; }
+
+/* storage meter */
+.storage { margin: 20px 12px 0; display: grid; gap: 6px; font-size: 12px; color: var(--muted); cursor: help; }
+.storage[hidden] { display: none; }
+.storage-top { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.storage-top span:first-child { color: var(--ink); font-weight: 500; }
+.meter { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter span { display: block; height: 100%; border-radius: 3px; background: var(--ink); }
+.storage.high .meter span { background: var(--warn); }
+.storage.full .meter span { background: var(--danger); }
+.storage.high .storage-note, .storage.full .storage-note { color: var(--ink); }
+
+/* font preview (home page line) */
+.font-preview { display: grid; gap: 14px; padding: 22px 22px 18px; border-radius: 10px; color: #fff; overflow: hidden;
+  background: linear-gradient(160deg, #6b5a48 0%, #9a6a34 45%, #6a2f12 78%, #1d1a18 100%); }
+.font-preview .fp-big { line-height: 0.98; text-wrap: balance; }
+.font-preview .fp-small { justify-self: end; max-width: 16ch; text-align: right; line-height: 1.05; }

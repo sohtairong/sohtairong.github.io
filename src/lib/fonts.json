@@ -1,0 +1,98 @@
+[
+  {
+    "id": "instrument-serif-italic",
+    "label": "Instrument Serif, italic (elegant, editorial)",
+    "family": "Instrument Serif",
+    "file": "instrument-serif-latin-400-italic.woff2",
+    "weight": 400,
+    "style": "italic",
+    "fallback": "Georgia, serif",
+    "caps": false,
+    "scale": 1,
+    "tracking": "-0.025em"
+  },
+  {
+    "id": "playfair-italic",
+    "label": "Playfair Display, italic (classic, high contrast)",
+    "family": "Playfair Display",
+    "file": "playfair-display-latin-400-italic.woff2",
+    "weight": 400,
+    "style": "italic",
+    "fallback": "Georgia, serif",
+    "caps": false,
+    "scale": 0.86,
+    "tracking": "-0.02em"
+  },
+  {
+    "id": "cormorant-italic",
+    "label": "Cormorant Garamond, italic (delicate, romantic)",
+    "family": "Cormorant Garamond",
+    "file": "cormorant-garamond-latin-500-italic.woff2",
+    "weight": 500,
+    "style": "italic",
+    "fallback": "Georgia, serif",
+    "caps": false,
+    "scale": 1.04,
+    "tracking": "-0.02em"
+  },
+  {
+    "id": "dm-serif",
+    "label": "DM Serif Display (upright, confident)",
+    "family": "DM Serif Display",
+    "file": "dm-serif-display-latin-400-normal.woff2",
+    "weight": 400,
+    "style": "normal",
+    "fallback": "Georgia, serif",
+    "caps": false,
+    "scale": 0.86,
+    "tracking": "-0.015em"
+  },
+  {
+    "id": "bebas",
+    "label": "Bebas Neue (tall capitals, poster-like)",
+    "family": "Bebas Neue",
+    "file": "bebas-neue-latin-400-normal.woff2",
+    "weight": 400,
+    "style": "normal",
+    "fallback": "Impact, sans-serif",
+    "caps": true,
+    "scale": 1.02,
+    "tracking": "0.005em"
+  },
+  {
+    "id": "inter-tight",
+    "label": "Inter Tight (clean, modern)",
+    "family": "Inter Tight Display",
+    "file": "inter-tight-latin-600-normal.woff2",
+    "weight": 600,
+    "style": "normal",
+    "fallback": "system-ui, sans-serif",
+    "caps": false,
+    "scale": 0.8,
+    "tracking": "-0.035em"
+  },
+  {
+    "id": "inter-tight-caps",
+    "label": "Inter Tight, capitals (bold, compact)",
+    "family": "Inter Tight Display",
+    "file": "inter-tight-latin-600-normal.woff2",
+    "weight": 600,
+    "style": "normal",
+    "fallback": "system-ui, sans-serif",
+    "caps": true,
+    "scale": 0.78,
+    "tracking": "-0.02em"
+  },
+  {
+    "id": "caveat",
+    "label": "Caveat (handwritten)",
+    "family": "Caveat",
+    "file": "caveat-latin-600-normal.woff2",
+    "weight": 600,
+    "style": "normal",
+    "fallback": "cursive",
+    "caps": false,
+    "scale": 1.02,
+    "tracking": "0"
+  }
+]

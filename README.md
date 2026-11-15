@@ -19,6 +19,8 @@ What you can do in Studio:
 - **Crop a photo:** press **Crop** under it, pick a shape (square, wide, tall or free), and drag the frame over the part to keep. This is how you turn a tall photo into a wide one so the trip page looks more varied. The full photo is kept in the trip's `photos/` folder, so **Edit crop** and **Remove crop** work at any time.
 - **Remove a photo or delete a trip:** an **Undo** button appears for a few seconds afterwards.
 - **Hide a trip for now:** tick "Hide this trip from the site".
+- **The top of the home page:** the first part of your line is the large line over the (slightly blurred) top photo, and the `*starred*` part is the smaller line at the bottom right. **Choose a font for each** from the two menus under “Your line”; a preview shows your words in the chosen fonts. Your portrait is shown in the About section.
+- **Adding a font to the menus:** put its `.woff2` file in `public/fonts/` and add an entry to `src/lib/fonts.json` (copy an existing one). `scale` evens out fonts that look bigger or smaller at the same size.
 - **Edit the home page and About:** the top photo and its caption, headline, portrait, bio, roles, links, and the places on the map you haven't posted yet.
 - **Use a trip photo as the top photo:** press **Use as top photo** under it.
 - **Preview:** **Preview site** opens the real site as visitors will see it, running on your computer.
@@ -187,7 +189,7 @@ Right under the top photo, the home page has a world map beside the list of plac
 
 ## Changing your details
 
-`src/content/about.md` holds the headline, the intro line, the portrait caption, your roles, your links and your email. The text below the `---` lines is your bio. Replace `src/content/portrait.jpg` with a photo of you (a 4:5 portrait crop looks best). To show Instagram in the menu, remove the `#` in front of the `instagram:` line and add your link.
+`src/content/about.md` holds the headline (the short line beside your portrait at the top of the home page), the intro line (the sentence under “Where I’ve been”), the portrait caption, your roles, your links and your email. The text below the `---` lines is your bio. Replace `src/content/portrait.jpg` with a photo of you (a 4:5 portrait crop looks best). To show Instagram in the menu, remove the `#` in front of the `instagram:` line and add your link.
 
 ## The photo behind the top of the home page
 
@@ -273,7 +275,14 @@ Only needed if you ever move the project to a new repository:
 
 ## Storage notes
 
-Each imported photo is about 400–700KB, so 300–400 photos keep the repository around 250MB, well within GitHub's limits. Keep your full-resolution originals in iCloud Photos. If the collection grows far beyond that, the `photos/` folders can move to Cloudflare R2 or Cloudinary without changing the components.
+GitHub asks that a project stays under about 1 GB. **Studio shows how much you've used** at the bottom of its left panel; point at it for the breakdown.
+
+- Each imported photo is roughly 100–700 KB, so 1 GB is room for well over a thousand photos.
+- A cropped photo counts twice, because the uncropped original is kept so the crop can be changed.
+- Removing a photo frees space on the site, but GitHub keeps earlier versions, so the total it stores never shrinks. The meter counts that too.
+- The meter turns amber at 70% and red at 90%. If you get there, the next step is storing the photos elsewhere (for example Cloudflare R2), which needs a change to Studio.
+
+Keep your full-resolution originals in iCloud Photos; the site only stores the resized copies.
 
 ## The sample content
 

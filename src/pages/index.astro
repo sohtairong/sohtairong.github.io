@@ -14,7 +14,7 @@ const trips = await getTrips();
 ---
 <Base header={false}>
   <Intro about={about} trips={trips} />
-  <PlacesMap places={placesFor(trips, about)} />
+  <PlacesMap places={placesFor(trips, about)} note={about.data.intro} />
   {trips.map((trip, i) => <TripCarousel trip={trip} reverse={i % 2 === 1} />)}
   <About about={about} />
 </Base>
