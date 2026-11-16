@@ -1,0 +1,34 @@
+#!/bin/bash
+# Studio as an app: starts the editor for the site without a Terminal window.
+# This app must stay inside the project folder (it finds the project from where it is).
+# To stop Studio, use "Quit Studio" at the bottom of Studio's left panel.
+# What Studio prints goes to ~/Library/Logs/TaiRongStudio.log.
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+LOG="$HOME/Library/Logs/TaiRongStudio.log"
+mkdir -p "$HOME/Library/Logs"
+say() { /usr/bin/osascript -e "display dialog \"$1\" with title \"Studio\" buttons {\"OK\"} default button 1" >/dev/null 2>&1; }
+
+# Apps started from the Dock don't know where Node.js is, so look in the usual places.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.volta/bin:$HOME/.fnm/aliases/default/bin:$PATH"
+if ! command -v node >/dev/null 2>&1; then
+  for d in "$HOME"/.nvm/versions/node/*/bin; do [ -x "$d/node" ] && PATH="$d:$PATH"; done
+fi
+if ! command -v node >/dev/null 2>&1; then
+  FOUND="$(/bin/zsh -lic 'command -v node' 2>/dev/null | tail -1)"
+  [ -n "$FOUND" ] && [ -x "$FOUND" ] && PATH="$(dirname "$FOUND"):$PATH"
+fi
+if ! command -v node >/dev/null 2>&1; then
+  say "Studio needs Node.js, which wasn’t found on this computer. Install it from nodejs.org (the LTS version), then open Studio again."
+  exit 1
+fi
+
+cd "$DIR" || { say "Studio couldn’t find its project folder. Keep Studio.app inside the tai-rong-site folder."; exit 1; }
+if [ ! -f studio/server.mjs ]; then say "Studio.app has been moved out of the project folder. Put it back in the tai-rong-site folder (you can drag it to the Dock from there)."; exit 1; fi
+if [ ! -d node_modules/astro ] || [ ! -d node_modules/sharp ] || [ ! -d node_modules/yaml ]; then
+  say "First-time setup is needed. Double-click “Open Studio.command” in the project folder once, then use this app from then on."
+  exit 1
+fi
+
+echo "---- $(date) ----" >> "$LOG"
+exec node studio/server.mjs >> "$LOG" 2>&1

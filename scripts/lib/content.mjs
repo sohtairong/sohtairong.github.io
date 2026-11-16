@@ -48,6 +48,7 @@ function normaliseTrip(id, data, body) {
       .map((p) => ({
         file: path.basename(p.src),
         original: typeof p.original === 'string' ? path.basename(p.original) : '',
+        taken: str(p.taken),
         title: str(p.title),
         story: str(p.story),
         city: str(p.city),
@@ -90,6 +91,7 @@ export async function writeTrip(id, trip) {
   data.photos = (trip.photos ?? []).filter((p) => validFileName(str(p.file))).map((p) => {
     const out = { src: `./photos/${p.file}` };
     if (validFileName(str(p.original)) && p.original !== p.file) out.original = `./photos/${p.original}`;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str(p.taken))) out.taken = p.taken;
     out.title = str(p.title).trim();
     out.story = str(p.story).trim();
     if (str(p.city).trim()) out.city = str(p.city).trim();

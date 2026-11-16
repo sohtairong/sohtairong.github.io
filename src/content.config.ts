@@ -29,6 +29,8 @@ const trips = defineCollection({
             src: image(),
             // Set by Studio when a photo has been cropped: the uncropped file, kept so the crop can be redone.
             original: z.string().optional(),
+            // When the photo was taken (written by Studio when the photo is added; used by "Sort by date taken").
+            taken: z.string().optional(),
             title: z.string().default(''),
             story: z.string().default(''),
             city: z.string().optional(),

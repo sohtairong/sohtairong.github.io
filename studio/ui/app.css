@@ -219,3 +219,23 @@ details.more[open] > summary { margin-bottom: 10px; }
 /* photos that still need a title or story */
 .photo .missing { margin-top: 6px; justify-self: start; }
 .photo .missing[hidden] { display: none; }
+
+/* small-photo marker */
+.photo .small-px { justify-self: start; cursor: help; }
+
+/* selecting several photos */
+.photo .pick { position: absolute; top: 6px; left: 6px; z-index: 1; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
+.photo .pick input { width: 15px; height: 15px; margin: 0; cursor: pointer; }
+.photo.picked { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.bulk { position: sticky; top: 66px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: var(--ink); color: var(--panel); }
+.bulk[hidden] { display: none; }
+.bulk .bulk-group { display: inline-flex; gap: 6px; }
+.bulk input[type='text'], .bulk select { min-height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid transparent; background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; }
+.bulk .bulk-end { margin-left: auto; display: inline-flex; gap: 12px; }
+.bulk .link { color: var(--panel); font-size: 13px; }
+
+/* publish follow-up and quit */
+.deploy { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--bg); font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.deploy.ok { background: var(--warn-bg); color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.deploy.bad { background: var(--danger-bg); color: var(--danger); }
+.side-foot .quit { margin-top: 10px; font-size: 12px; color: var(--muted); }

@@ -169,6 +169,33 @@ function missingSummary(t) {
   return n ? `<span class="tag warn" id="missing-summary">${n} photo${n === 1 ? '' : 's'} without a title or story</span>` : '<span id="missing-summary"></span>';
 }
 
+// Photos ticked for a group action (by file name), in the trip being edited.
+const picked = new Set();
+const pickedOf = (t) => t.photos.filter((p) => picked.has(p.file));
+function bulkBar(t) {
+  const n = pickedOf(t).length;
+  if (!n) return '<div class="bulk" id="bulk" hidden></div>';
+  const others = S.trips.filter((o) => o.id !== t.id && !o.broken);
+  return `<div class="bulk" id="bulk">
+    <strong>${n} selected</strong>
+    <span class="bulk-group"><input type="text" id="bulk-city" placeholder="City for all selected" list="city-list" aria-label="City for the selected photos"><button class="btn small" type="button" data-act="bulk-city">Set city</button></span>
+    <button class="btn small" type="button" data-act="bulk-star-on" title="Show the selected photos in the home page row">★ Add to carousel</button>
+    <button class="btn small" type="button" data-act="bulk-star-off">Take off carousel</button>
+    ${others.length ? `<span class="bulk-group"><select id="bulk-to" aria-label="Trip to move the selected photos to">${others.map((o) => `<option value="${h(o.id)}">${h(o.country)} · ${h(monthLabel(o))}</option>`).join('')}</select><button class="btn small" type="button" data-act="bulk-move">Move</button></span>` : ''}
+    <button class="btn small danger" type="button" data-act="bulk-remove">Remove</button>
+    <span class="bulk-end"><button class="link" type="button" data-act="bulk-all">Select all</button><button class="link" type="button" data-act="bulk-none">Clear</button></span>
+  </div>`;
+}
+function refreshBulk() {
+  const t = currentTrip(), el = $('#bulk');
+  if (t && el) el.outerHTML = bulkBar(t);
+}
+
+// Photos under this many pixels on their longer side look soft on large screens.
+const SMALL_PX = 1600;
+const isSmall = (p) => p.px > 0 && p.px < SMALL_PX;
+const SMALL_HELP = 'To get full-size photos out of the Photos app: File > Export > Export Photos, with Size set to Full Size and Quality to Maximum. Dragging a photo straight out of Photos gives a small copy.';
+
 function tripStatus(t) {
   if (t.broken) return '<span class="tag warn">Needs fixing</span>';
   if (!t.photos.length) return '<span class="tag warn">No photos yet</span>';
@@ -222,7 +249,7 @@ function renderStorage() {
 
 function renderChrome() {
   $('#brand-name').textContent = S.about.name ? ` · ${S.about.name}` : '';
-  $('#side-foot').innerHTML = S.site ? `Live site: <a href="${h(S.site)}" target="_blank" rel="noopener">${h(S.site.replace(/^https?:\/\//, ''))}</a>` : '';
+  $('#side-foot').innerHTML = `${S.site ? `Live site: <a href="${h(S.site)}" target="_blank" rel="noopener">${h(S.site.replace(/^https?:\/\//, ''))}</a><br>` : ''}<button class="link quit" type="button" id="quit-studio" title="Stop Studio and the site preview on this computer">Quit Studio</button>`;
   renderSide();
   renderPublishButton();
   renderStorage();
@@ -230,6 +257,7 @@ function renderChrome() {
 }
 
 function go(next) {
+  if (next.kind !== view.kind || next.id !== view.id) picked.clear();
   view = next;
   renderSide();
   refreshHeaderLinks();
@@ -243,7 +271,8 @@ function go(next) {
 function photoCard(t, p, i) {
   const n = t.photos.length;
   return `
-  <li class="photo" data-i="${i}">
+  <li class="photo${picked.has(p.file) ? ' picked' : ''}" data-i="${i}">
+    <label class="pick" title="Select this photo to change several at once"><input type="checkbox" data-pick ${picked.has(p.file) ? 'checked' : ''} aria-label="Select photo ${i + 1}"></label>
     <div class="pic">
       <button class="thumb" type="button" data-act="zoom" title="See it larger"><img src="${h(thumb(t, p.file, 320))}" alt="" loading="lazy" draggable="false"></button>
       <div class="order">
@@ -253,6 +282,7 @@ function photoCard(t, p, i) {
       </div>
       <span class="num">${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}</span>
       <span class="tag warn missing" ${missingText(p) ? '' : 'hidden'}>${missingText(p)}</span>
+      ${isSmall(p) ? `<span class="tag warn small-px" title="This photo is only ${p.px} pixels on its longer side, so it looks soft on large screens. Use Replace to swap in the full-size photo.">Small · ${p.px} px</span>` : ''}
     </div>
     <div class="fields">
       <input class="title" type="text" data-p="title" value="${h(p.title)}" placeholder="Title" aria-label="Title of photo ${i + 1}">
@@ -270,6 +300,7 @@ function photoCard(t, p, i) {
       <div class="actions">
         <button class="star" type="button" data-act="star" aria-pressed="${p.featured}" title="Show this photo in the scrolling row on the home page">★ Home carousel</button>
         <button class="link" type="button" data-act="crop" title="Change this photo’s shape, for example tall to wide">${p.original ? 'Edit crop' : 'Crop'}</button>
+        <button class="link" type="button" data-act="replace" title="Swap in a better file (for example the full-size photo). The title, story and position stay.">Replace…</button>
         <button class="link" type="button" data-act="hero" title="Use this as the big photo at the top of the home page">Use as top photo</button>
         <button class="link danger" type="button" data-act="remove">Remove</button>
       </div>
@@ -282,13 +313,15 @@ function photosBlock(t) {
   const busy = upload && upload.id === t.id;
   return `
     <div class="photos-head">
-      <div><h2>Photos</h2><span class="muted">${t.photos.length ? `${t.photos.length} in this trip · ${featured || 'the first 6'} in the home carousel · drag ⠿ or use the arrows to reorder` : 'Add photos to put this trip on the site.'}</span> ${missingSummary(t)}</div>
+      <div><h2>Photos</h2><span class="muted">${t.photos.length ? `${t.photos.length} in this trip · ${featured || 'the first 6'} in the home carousel · drag ⠿ or use the arrows to reorder` : 'Add photos to put this trip on the site.'}</span> ${missingSummary(t)} ${t.photos.some(isSmall) ? `<span class="tag warn" title="${h(SMALL_HELP)}">${t.photos.filter(isSmall).length} small photo${t.photos.filter(isSmall).length === 1 ? '' : 's'}</span>` : ''}</div>
       <div class="head-actions">
+        ${t.photos.length > 1 ? '<button class="btn small" type="button" data-act="sort-taken" title="Put the photos in the order they were taken">Sort by date taken</button>' : ''}
         <button class="btn small" type="button" data-act="pick-photos">Add photos…</button>
         <button class="btn small" type="button" data-act="pick-folder">Add a folder…</button>
       </div>
     </div>
     ${busy ? `<div class="progress"><div class="bar"><i style="width:${Math.round((upload.done / upload.total) * 100)}%"></i></div><div class="txt">Adding photo ${Math.min(upload.done + 1, upload.total)} of ${upload.total}. Converting, resizing and removing location data…</div></div>` : ''}
+    ${bulkBar(t)}
     <ul class="photo-grid" id="photo-grid">${t.photos.map((p, i) => photoCard(t, p, i)).join('')}</ul>
     <div class="dropzone" id="dropzone"><strong>Drop photos or a folder here</strong><span>iPhone HEIC photos are fine. Location data is removed from every photo.</span></div>
     <datalist id="city-list">${t.cities.map((c) => `<option value="${h(c)}">`).join('')}</datalist>`;
@@ -575,7 +608,7 @@ async function addPhotos(trip, files) {
   // New photos go in the order they were taken.
   added.sort((a, b) => (a.takenAt ?? Infinity) - (b.takenAt ?? Infinity) || a.order - b.order);
   let featured = trip.photos.filter((p) => p.featured).length;
-  for (const a of added) trip.photos.push({ file: a.file, title: '', story: '', city: '', alt: '', featured: featured++ < 6, original: '', layout: '' });
+  for (const a of added) trip.photos.push({ file: a.file, taken: a.taken || '', px: a.px || 0, title: '', story: '', city: '', alt: '', featured: featured++ < 6, original: '', layout: '' });
   const errors = upload.errors;
   upload = null;
   if (currentTrip() === trip) { rerenderPhotos(); const sub = $('#trip-sub'); if (sub && !trip.draft && trip.photos.length) sub.textContent = 'Shown on the site after you publish.'; }
@@ -583,7 +616,37 @@ async function addPhotos(trip, files) {
   await save(trip.id);
   refreshHeaderLinks();
   if (added.length) toast(`Added ${added.length} photo${added.length === 1 ? '' : 's'}. Now give them titles and stories.`);
+  const small = added.filter((a) => a.px && a.px < SMALL_PX).length;
+  if (small) toast(`${small} of the ${added.length} photo${added.length === 1 ? ' is' : 's are'} small (under ${SMALL_PX} pixels) and will look soft on large screens.\n${SMALL_HELP}`, { bad: true, ms: 14000 });
   if (errors.length) toast(`${errors.length} photo${errors.length === 1 ? '' : 's'} couldn’t be added:\n${errors.slice(0, 3).join('\n')}`, { bad: true });
+}
+
+// Swaps a photo's file for a better one, keeping its words and its place in the trip.
+async function replacePhoto(t, i, file) {
+  if (!file) return;
+  if (!IMAGE.test(file.name)) return toast('That isn’t a photo Studio can use.', { bad: true });
+  await flush();
+  if (saveError) return toast(`Couldn’t save your last change: ${saveError}`, { bad: true });
+  const p = t.photos[i], before = p.px;
+  toast('Preparing the new photo…', { ms: 2500 });
+  try {
+    const r = await api('POST', `/api/trips/${encodeURIComponent(t.id)}/photos/${encodeURIComponent(p.file)}/replace?name=${encodeURIComponent(file.name)}`, file, { raw: true });
+    Object.assign(p, { file: r.file, original: '', px: r.px, taken: r.taken || p.taken });
+    if (currentTrip() === t) rerenderPhotos();
+    renderSide(); refreshChanges();
+    toast(r.px < SMALL_PX ? `Replaced, but the new photo is still small (${r.px} pixels).\n${SMALL_HELP}` : `Replaced${before ? `: ${before} → ${r.px} pixels` : ''}. Its title, story and position are unchanged.`, r.px < SMALL_PX ? { bad: true, ms: 12000 } : undefined);
+  } catch (e) { toast(e.message, { bad: true }); }
+}
+
+// Puts a trip's photos in the order they were taken. Photos with no known date keep their order, after the dated ones.
+function sortByTaken(t) {
+  const dated = t.photos.filter((p) => p.taken).length;
+  if (!dated) return toast('Studio doesn’t know when these photos were taken. It records the date when a photo is added or replaced, starting from this version.');
+  const order = t.photos.map((p, i) => ({ p, i }));
+  order.sort((a, b) => (a.p.taken && b.p.taken ? a.p.taken.localeCompare(b.p.taken) : a.p.taken ? -1 : b.p.taken ? 1 : 0) || a.i - b.i);
+  t.photos = order.map((o) => o.p);
+  rerenderPhotos(); touch(t.id, 200);
+  toast(dated < t.photos.length ? `Sorted. ${t.photos.length - dated} photo${t.photos.length - dated === 1 ? ' has' : 's have'} no known date and ${t.photos.length - dated === 1 ? 'is' : 'are'} at the end.` : 'Sorted by date taken.');
 }
 
 async function newTripDialog(files = []) {
@@ -776,14 +839,42 @@ async function publishDialog() {
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Checking and publishing…';
     try {
       const r = await api('POST', '/api/publish', { note: $('#p-note').value });
-      openDialog(`<div class="inner"><h2>Sent ✓</h2><p class="muted" style="margin:0">The live site rebuilds itself now and updates in a minute or two. If you still see the old version after that, reload the page.</p>
+      openDialog(`<div class="inner"><h2>Sent ✓</h2><p class="muted" style="margin:0">The live site rebuilds itself now and updates in a minute or two. You can close this; Studio keeps watching.</p>
+        <p class="deploy" id="deploy"><span class="spinner"></span> Waiting for GitHub to start building…</p>
         <div class="foot">${r.actions ? `<a class="btn" href="${h(r.actions)}" target="_blank" rel="noopener">Watch the progress ↗</a>` : ''}${r.site ? `<a class="btn" href="${h(r.site)}" target="_blank" rel="noopener">Open the live site ↗</a>` : ''}<button class="btn primary" type="button" data-close>Done</button></div></div>`);
+      watchDeploy();
     } catch (err) {
       const el = $('#p-error'); el.textContent = err.message; el.hidden = false;
       btn.disabled = false; btn.textContent = 'Try again';
     }
     refreshChanges();
   });
+}
+
+// After a publish, watch GitHub until the new version is live (or the build fails) and say so.
+let deployTimer;
+function watchDeploy(started = Date.now()) {
+  clearTimeout(deployTimer);
+  const show = (html, cls = '') => { const el = $('#deploy'); if (el) { el.className = `deploy ${cls}`; el.innerHTML = html; } };
+  const tick = async () => {
+    let r = { state: 'unknown' };
+    try { r = await api('GET', '/api/deploy'); } catch { /* try again */ }
+    const link = r.url ? ` <a href="${h(r.url)}" target="_blank" rel="noopener">Details ↗</a>` : '';
+    if (r.state === 'live') { show('✓ The new version is live. Reload the site to see it.', 'ok'); return toast('Your changes are live on the site ✓'); }
+    if (r.state === 'failed') { show(`GitHub couldn’t build the new version, so the live site is unchanged.${link}`, 'bad'); return toast('GitHub couldn’t build the new version. The live site is unchanged. Open Publish > Details to see why.', { bad: true }); }
+    if (Date.now() - started > 8 * 60 * 1000) return show(`Still not finished after 8 minutes. Check the progress on GitHub.${link}`);
+    show(`<span class="spinner"></span> ${r.state === 'building' ? 'GitHub is building the new version…' : 'Waiting for GitHub to start building…'}${link}`);
+    deployTimer = setTimeout(tick, 8000);
+  };
+  deployTimer = setTimeout(tick, 4000);
+}
+
+// Bring this folder up to date with GitHub when Studio opens (changes published from another computer or copy).
+async function syncNow() {
+  try {
+    const r = await api('POST', '/api/sync');
+    if (r.pulled) { await load(view); toast(`Fetched ${r.pulled} update${r.pulled === 1 ? '' : 's'} from GitHub that were published from another computer or copy.`); }
+  } catch (e) { toast(e.message, { bad: true }); }
 }
 
 // ---------------------------------------------------------------- rendering + events
@@ -800,6 +891,72 @@ function render() {
 }
 
 // Typing in a field: update the copy in memory, then save a moment later.
+main.addEventListener('change', (e) => {
+  const box = e.target.closest?.('[data-pick]');
+  const t = currentTrip();
+  if (!box || !t) return;
+  const card = box.closest('.photo'), p = t.photos[Number(card.dataset.i)];
+  if (box.checked) picked.add(p.file); else picked.delete(p.file);
+  card.classList.toggle('picked', box.checked);
+  refreshBulk();
+});
+
+// ---- actions on several photos at once ----
+async function bulkAction(t, act) {
+  const sel = pickedOf(t);
+  if (act === 'bulk-all') { t.photos.forEach((p) => picked.add(p.file)); return rerenderPhotos(); }
+  if (act === 'bulk-none') { picked.clear(); return rerenderPhotos(); }
+  if (!sel.length) return;
+  if (act === 'bulk-city') {
+    const city = $('#bulk-city').value.trim();
+    sel.forEach((p) => { p.city = city; });
+    rerenderPhotos(); touch(t.id, 200);
+    return toast(city ? `Set the city to “${city}” on ${sel.length} photo${sel.length === 1 ? '' : 's'}.` : `Cleared the city on ${sel.length} photo${sel.length === 1 ? '' : 's'}.`);
+  }
+  if (act === 'bulk-star-on' || act === 'bulk-star-off') {
+    sel.forEach((p) => { p.featured = act === 'bulk-star-on'; });
+    rerenderPhotos(); return touch(t.id, 200);
+  }
+  if (act === 'bulk-move') {
+    const to = $('#bulk-to').value, dest = S.trips.find((o) => o.id === to);
+    await flush();
+    if (saveError) return toast(`Couldn’t save your last change: ${saveError}`, { bad: true });
+    try {
+      const r = await api('POST', `/api/trips/${encodeURIComponent(t.id)}/move`, { files: sel.map((p) => p.file), to });
+      picked.clear();
+      await load({ kind: 'trip', id: t.id });
+      toast(`Moved ${r.moved} photo${r.moved === 1 ? '' : 's'} to ${dest?.country ?? 'the other trip'}. They are at the end of that trip.`);
+    } catch (e) { toast(e.message, { bad: true }); }
+    return;
+  }
+  if (act === 'bulk-remove') {
+    const ok = await confirmBox({ title: `Remove ${sel.length} photo${sel.length === 1 ? '' : 's'}?`, text: 'They come off the site when you publish. You can undo straight afterwards.', yes: 'Remove', danger: true });
+    if (!ok) return;
+    const places = sel.map((p) => ({ p, i: t.photos.indexOf(p) }));
+    t.photos = t.photos.filter((p) => !picked.has(p.file));
+    picked.clear();
+    rerenderPhotos();
+    await save(t.id);
+    const undos = [];
+    for (const { p } of places) {
+      try { const r = await api('DELETE', `/api/trips/${encodeURIComponent(t.id)}/photos/${encodeURIComponent(p.file)}${p.original ? `?original=${encodeURIComponent(p.original)}` : ''}`); if (r.undo) undos.push(r.undo); }
+      catch (e) { toast(e.message, { bad: true }); }
+    }
+    refreshChanges();
+    toast(`Removed ${places.length} photo${places.length === 1 ? '' : 's'}.`, undos.length === places.length && {
+      action: 'Undo',
+      onAction: async () => {
+        try {
+          for (const u of undos) await api('POST', '/api/undo', { ...u, id: t.id });
+          for (const { p, i } of places) t.photos.splice(Math.min(i, t.photos.length), 0, p);
+          if (currentTrip() === t) rerenderPhotos(); else renderSide();
+          touch(t.id, 0);
+        } catch (e) { toast(e.message, { bad: true }); }
+      },
+    });
+  }
+}
+
 main.addEventListener('input', (e) => {
   const el = e.target;
   if (el.tagName === 'TEXTAREA') autosize(el);
@@ -858,7 +1015,10 @@ main.addEventListener('click', async (e) => {
     if (act === 'later') return movePhoto(t, i, i + 1);
     if (act === 'star') { t.photos[i].featured = !t.photos[i].featured; rerenderPhotos(); return touch(t.id, 200); }
     if (act === 'remove') return removePhoto(t, i);
+    if (act.startsWith('bulk-')) return bulkAction(t, act);
     if (act === 'crop') return cropDialog(t, i);
+    if (act === 'replace') return replacePhoto(t, i, (await pickFiles())[0]);
+    if (act === 'sort-taken') return sortByTaken(t);
     if (act === 'zoom') return openDialog(`<div class="inner"><img class="big" src="${h(thumb(t, t.photos[i].file, 1800))}" alt="${h(t.photos[i].alt || t.photos[i].title)}"><div class="foot"><span class="muted" style="margin-right:auto">${h(t.photos[i].title || t.photos[i].file)}</span><button class="btn primary" type="button" data-close>Close</button></div></div>`, { wide: true });
     if (act === 'hero') {
       try { S.about = (await api('POST', '/api/about/hero-from', { trip: t.id, file: t.photos[i].file })).about; refreshChanges(); toast('This is now the big photo at the top of the home page.'); }
@@ -1003,4 +1163,13 @@ async function load(next) {
   render();
 }
 
-load();
+// Quit Studio: saves, stops the server and the preview, and leaves a page that says so.
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest?.('#quit-studio')) return;
+  await flush();
+  if (saveError) return toast(`Couldn’t save your last change, so Studio is still running: ${saveError}`, { bad: true });
+  try { await api('POST', '/api/quit'); } catch { /* it may stop before answering */ }
+  document.body.innerHTML = '<div class="empty" style="margin:18vh auto"><h1>Studio has stopped</h1><p class="muted">Your work is saved. You can close this tab. Open Studio again whenever you like.</p></div>';
+});
+
+load().then(syncNow);

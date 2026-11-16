@@ -158,6 +158,46 @@ function actionsUrl(remote) {
   return m ? `https://github.com/${m[1]}/${m[2]}/actions` : '';
 }
 
+/**
+ * Brings this folder up to date with GitHub (changes published from another computer or copy).
+ * Returns how many updates arrived. Local edits are kept; if they clash, nothing is changed and the problem is reported.
+ */
+async function sync() {
+  const inside = await run('git', ['rev-parse', '--abbrev-ref', '@{u}']);
+  if (!inside.ok) return { pulled: 0 };               // not set up with GitHub yet
+  const fetched = await run('git', ['fetch', '--quiet'], { timeout: 60000 });
+  if (!fetched.ok) return { pulled: 0, offline: true };
+  const behind = Number((await run('git', ['rev-list', '--count', 'HEAD..@{u}'])).stdout.trim()) || 0;
+  if (!behind) return { pulled: 0 };
+  const pull = await run('git', ['pull', '--rebase', '--autostash'], { timeout: 180000 });
+  if (!pull.ok) {
+    await run('git', ['rebase', '--abort']);
+    const all = (pull.stderr + pull.stdout).split('\n').map((l) => l.trim()).filter(Boolean);
+    const clashes = all.filter((l) => /^CONFLICT|would be overwritten/i.test(l));
+    const text = (clashes.length ? clashes : all.filter((l) => !/^hint:/.test(l)).slice(-3)).join('\n');
+    throw new Problem(`GitHub has ${behind} update${behind === 1 ? '' : 's'} from another computer that clash with the changes here, so Studio left everything as it is. The usual cause is the same trip edited in two places. To fix it, undo the changes on one side, or run “git pull --rebase” in Terminal in this folder and resolve the clash there.\n\nDetails: ${text}`, 409);
+  }
+  return { pulled: behind };
+}
+
+/** How the GitHub build of the latest published version is going: waiting, building, live or failed. */
+async function deployStatus() {
+  const remote = (await run('git', ['remote', 'get-url', 'origin'])).stdout.trim();
+  const m = /github\.com[:/]([^/]+)\/([^/]+?)(\.git)?$/.exec(remote);
+  const sha = (await run('git', ['rev-parse', 'HEAD'])).stdout.trim();
+  if (!m || !sha) return { state: 'unknown' };
+  try {
+    const res = await fetch(`https://api.github.com/repos/${m[1]}/${m[2]}/actions/runs?head_sha=${sha}&per_page=10`, { headers: { accept: 'application/vnd.github+json', 'user-agent': 'studio' }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return { state: 'unknown' };
+    const runs = (await res.json()).workflow_runs ?? [];
+    // The site is built by the "Deploy to GitHub Pages" workflow; GitHub's own "pages build and deployment" run is ignored.
+    const mine = runs.find((r) => /deploy/i.test(r.name) && !/pages build and deployment/i.test(r.name)) ?? runs.find((r) => !/pages build and deployment/i.test(r.name));
+    if (!mine) return { state: 'waiting' };
+    if (mine.status !== 'completed') return { state: 'building', url: mine.html_url };
+    return { state: mine.conclusion === 'success' ? 'live' : 'failed', url: mine.html_url };
+  } catch { return { state: 'unknown' }; }
+}
+
 /** Builds the site the way GitHub will, so a mistake is caught here and explained, not found later as a failed deploy. */
 async function checkBuild() {
   const astro = path.join(ROOT, 'node_modules/astro/bin/astro.mjs');
@@ -198,6 +238,10 @@ async function publish(note) {
     }
     steps.push('Saved your changes');
   }
+
+  // Take in anything published from another computer first, so the push isn't refused.
+  const synced = await sync();
+  if (synced.pulled) steps.push(`Fetched ${synced.pulled} update${synced.pulled === 1 ? '' : 's'} from GitHub`);
 
   const push = await run('git', ['push'], { timeout: 180000 });
   if (!push.ok) {
@@ -252,9 +296,26 @@ function stopPreview() {
 
 // ---------- the API ----------
 
+// The longer side of a photo in pixels, so Studio can point out the ones too small to look sharp.
+const edgeCache = new Map();
+async function longEdge(file) {
+  try {
+    const stat = await fs.stat(file);
+    const key = `${file}|${stat.mtimeMs}`;
+    if (!edgeCache.has(key)) { const m = await sharp(file).metadata(); edgeCache.set(key, Math.max(m.width ?? 0, m.height ?? 0)); }
+    return edgeCache.get(key);
+  } catch { return 0; }
+}
+async function withSizes(trips) {
+  for (const t of trips) for (const p of t.photos) p.px = await longEdge(path.join(TRIPS, t.id, 'photos', p.file));
+  return trips;
+}
+const isoMinute = (d) => (d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
+
 async function state() {
   const [trips, about, change, site, known, space] = await Promise.all([listTrips(), readAbout(), changes(), siteUrl(), countries(), storage()]);
   const fonts = JSON.parse(await fs.readFile(path.join(ROOT, 'src/lib/fonts.json'), 'utf8').catch(() => '[]'));
+  await withSizes(trips);
   return { fonts, trips, about, changes: { ...change, storage: space }, site, countries: known, preview: previewUrl, actions: actionsUrl(change.remote) };
 }
 
@@ -264,6 +325,13 @@ async function api(req, res, url) {
   const is = (m, ...shape) => method === m && parts.length === shape.length && shape.every((s, i) => s === '*' || s === parts[i]);
 
   if (is('GET', 'state')) return send(res, 200, await state());
+  if (is('POST', 'sync')) return send(res, 200, await sync());
+  if (is('GET', 'deploy')) return send(res, 200, await deployStatus());
+  if (is('POST', 'quit')) {
+    send(res, 200, { ok: true });
+    setTimeout(() => { stopPreview(); process.exit(0); }, 150);
+    return;
+  }
   if (is('GET', 'changes')) return send(res, 200, { ...(await changes()), storage: await storage() });
   if (is('GET', 'preview')) return send(res, 200, { running: await previewRunning(), url: previewUrl, log: previewLog.slice(-1500) });
 
@@ -304,7 +372,58 @@ async function api(req, res, url) {
       await fs.mkdir(photoDir, { recursive: true });
       const file = uniqueName(name, await takenNames(photoDir));
       await fs.writeFile(path.join(photoDir, file), out.data);
-      return send(res, 200, { file, takenAt: when ? when.getTime() : null, width: out.width, height: out.height, kb: Math.round(out.size / 1024) });
+      return send(res, 200, { file, takenAt: when ? when.getTime() : null, taken: isoMinute(when), px: Math.max(out.width, out.height), width: out.width, height: out.height, kb: Math.round(out.size / 1024) });
+    }
+    // Move photos (with their words) to another trip.
+    if (is('POST', 'trips', '*', 'move')) {
+      const { files, to } = await readJson(req);
+      if (!validTripId(String(to)) || to === id || !Array.isArray(files) || !files.length) throw new Problem('Choose the trip to move the photos to.');
+      const from = await readTrip(id);
+      const dest = await readTrip(to);
+      const destDir = path.join(TRIPS, to, 'photos');
+      await fs.mkdir(destDir, { recursive: true });
+      const taken = await takenNames(destDir);
+      let moved = 0;
+      for (const file of files) {
+        const at = from.photos.findIndex((p) => p.file === file);
+        if (at < 0 || !(await exists(path.join(photoDir, file)))) continue;
+        const [photo] = from.photos.splice(at, 1);
+        const name = uniqueName(file, taken);
+        await fs.rename(path.join(photoDir, file), path.join(destDir, name));
+        if (photo.original && (await exists(path.join(photoDir, photo.original)))) {
+          const orig = uniqueName(photo.original, taken);
+          await fs.rename(path.join(photoDir, photo.original), path.join(destDir, orig));
+          photo.original = orig;
+        } else photo.original = '';
+        photo.file = name;
+        dest.photos.push(photo);
+        moved++;
+      }
+      await writeTrip(to, dest);
+      await writeTrip(id, from);
+      return send(res, 200, { moved });
+    }
+    // Swap a photo's file for a better one. Its title, story, city and place in the trip stay; a crop is dropped.
+    if (is('POST', 'trips', '*', 'photos', '*', 'replace')) {
+      const old = parts[3];
+      const name = url.searchParams.get('name') || 'photo.jpg';
+      if (!isImageName(name)) throw new Problem(`“${name}” isn’t a photo Studio can use (JPEG, PNG, WebP, HEIC or TIFF).`);
+      const trip = await readTrip(id);
+      const photo = trip.photos.find((p) => p.file === old);
+      if (!photo) throw new Problem('That photo is no longer in this trip. Reload the page.', 404);
+      const raw = await readBody(req);
+      const when = await takenAt(raw);
+      let out;
+      try { out = await prepare(raw, name); }
+      catch (e) { throw new Problem(`Couldn’t read “${name}”. If it’s a HEIC photo, export it from Photos as JPEG and try again.\n(${e.message})`, 422); }
+      const file = uniqueName(name, await takenNames(photoDir));
+      await fs.writeFile(path.join(photoDir, file), out.data);
+      const gone = [old, photo.original].filter((f) => f && f !== file);
+      photo.file = file; photo.original = '';
+      if (when) photo.taken = isoMinute(when);
+      await writeTrip(id, trip);
+      for (const f of gone) if (await exists(path.join(photoDir, f))) await trashPath(path.join(photoDir, f), `photo__${id}__${f}`);
+      return send(res, 200, { file, taken: photo.taken || '', px: Math.max(out.width, out.height) });
     }
     // Crop a photo. The uncropped file is kept beside it so the crop can be changed or undone later.
     if (is('POST', 'trips', '*', 'photos', '*', 'crop') || is('POST', 'trips', '*', 'photos', '*', 'uncrop')) {
@@ -466,13 +585,31 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.on('error', (e) => {
-  if (e.code === 'EADDRINUSE') {
-    console.log(`\nStudio is already open at http://localhost:${PORT}\n`);
-    openBrowser();
-    process.exit(0);
-  }
+  if (e.code === 'EADDRINUSE') return void takeOver();
   throw e;
 });
+
+// A Studio is already running (often an older version). Ask it to stop, or stop it, then start this one in its place.
+let takeOverTried = false;
+async function takeOver() {
+  const giveUp = (why) => { console.log(`\n${why}\nStudio is still open at http://localhost:${PORT}\n`); openBrowser(); process.exit(0); };
+  if (takeOverTried) return giveUp('Couldn’t replace the Studio that is already running.');
+  takeOverTried = true;
+  console.log('\n  A Studio is already running. Replacing it with this one…');
+  let asked = false;
+  try { asked = (await fetch(`http://127.0.0.1:${PORT}/api/quit`, { method: 'POST', headers: { 'x-studio': '1' }, signal: AbortSignal.timeout(3000) })).ok; } catch { /* older versions can’t be asked */ }
+  if (!asked && process.platform !== 'win32') {
+    // An older Studio: find the program holding the port and stop it, but only if it really is Studio.
+    const pids = (await run('lsof', ['-ti', `tcp:${PORT}`, '-sTCP:LISTEN'])).stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+    for (const pid of pids) {
+      const what = (await run('ps', ['-p', pid, '-o', 'command='])).stdout;
+      if (!/studio\/server\.mjs/.test(what)) return giveUp(`Port ${PORT} is being used by something that isn’t Studio.`);
+      try { process.kill(Number(pid), 'SIGTERM'); } catch { return giveUp('The Studio that is running was started by another user on this computer, so this one can’t close it. Log in as that user and close it, or restart the computer.'); }
+    }
+    if (!pids.length) return giveUp('Couldn’t find the Studio that is already running (it may belong to another user on this computer).');
+  }
+  setTimeout(() => server.listen(PORT, '127.0.0.1'), 900);
+}
 
 function openBrowser() {
   if (process.env.STUDIO_NO_OPEN) return;
@@ -481,13 +618,14 @@ function openBrowser() {
   spawn(cmd, args, { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
 }
 
-server.listen(PORT, '127.0.0.1', async () => {
+server.on('listening', async () => {
   console.log(`\n  Studio is running:  http://localhost:${PORT}`);
   console.log(`  Site preview:       ${previewUrl}`);
   console.log('\n  Leave this window open while you work. Close it (or press Ctrl+C) when you’re done.\n');
   if (!process.env.STUDIO_NO_PREVIEW) await startPreview();
   openBrowser();
 });
+server.listen(PORT, '127.0.0.1');
 
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { stopPreview(); process.exit(0); });
 process.on('exit', stopPreview);

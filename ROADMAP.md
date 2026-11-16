@@ -14,6 +14,18 @@ Updated as each item is finished and placed in this folder. Anything ticked is i
 - [ ] 9. Keep cropped originals out of the public repository — NOT done. It needs a decision first: if the originals stay off GitHub, a crop can only be changed or undone on the computer that still has the original file.
 - [x] 11. Remove leftover code (the unused cut-out upload; nothing else was removed)
 
+## Studio upgrades checklist (round 2)
+
+- [x] S1. Replace a photo, keeping its words
+- [x] S2. Warn about small photos when adding them
+- [x] S3. Show when the published site is live (or failed) — built, but NOT tested against GitHub itself (it was unreachable from where this was written). If it never leaves “Waiting…”, check deployStatus() in studio/server.mjs.
+- [x] S4. Stay in step with GitHub automatically
+- [x] S5. Edit many photos at once
+- [x] S6. Take over from an old Studio that is still running
+- [x] S7. Move photos between trips
+- [x] S8. Sort a trip by date taken
+- [x] S9. A proper app icon for Studio — Studio.app is in this folder, but it could NOT be tried on a Mac from where it was written. If it doesn’t open: right-click > Open the first time; check ~/Library/Logs/TaiRongStudio.log; and make sure Studio.app/Contents/MacOS/Studio is executable (chmod +x). “Open Studio.command” still works either way.
+
 ## For visitors
 
 1. **Add more trips.** The map shows eight places with only one filled in. This matters more than any further design work.

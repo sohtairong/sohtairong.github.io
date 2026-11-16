@@ -8,12 +8,18 @@ Studio is a private editor for this site. It runs only on your computer and neve
 
 **To open it:** double-click **Open Studio.command** in this folder. A Terminal window opens (leave it open while you work) and Studio appears in your browser. Close the Terminal window when you're done.
 
+**Or use the app:** **Studio.app** in this folder opens Studio with no Terminal window. Drag it to the Dock to keep it handy, but leave the app itself in this folder (it finds the project from where it is). Run **Open Studio.command** once first on a new computer, since that does the first-time setup. To stop Studio, use **Quit Studio** at the bottom of its left panel. The first time, macOS may refuse to open the app because it isn't from the App Store: right-click it and choose **Open**. If it doesn't start, the reason is in `~/Library/Logs/TaiRongStudio.log`.
+
 What you can do in Studio:
 
 - **Add a trip:** press **+ New trip**, or drag a folder of photos anywhere onto the page. Type the country and month; the month is read from the first photo when it can be. iPhone HEIC photos are converted, every photo is resized, and all location data is removed.
 - **Add photos to a trip:** open the trip and drag photos or a folder onto the page. New photos are added in the order they were taken.
 - **Write titles and stories:** type in the boxes beside each photo. Changes save on their own a moment after you stop typing.
 - **See what still needs words:** a photo with no title or no story is marked, the trip shows how many are left, and the trip list shows “N to caption”. The markers clear as you type.
+- **Spot photos that are too small:** photos under 1600 pixels on their longer side are marked “Small”, and Studio warns when you add them. They look soft on large screens. To get full-size photos out of the Photos app, use File > Export > Export Photos with Size set to Full Size; dragging a photo straight out of Photos gives a small copy.
+- **Replace a photo:** **Replace…** under a photo swaps in a better file and keeps its title, story, city and position. A crop is dropped (crop again if you need to), and that photo’s own share link changes because the link comes from the file name.
+- **Sort by date taken:** puts a trip’s photos in the order they were shot. Studio records the date when a photo is added or replaced, so photos added before this feature have no date and go to the end.
+- **Change several photos at once:** tick the box on the photos you want (or **Select all**), then use the bar that appears to set their city, add or take them off the home carousel, move them to another trip, or remove them.
 - **Arrange photos:** drag a photo by its ⠿ handle, or use the ← → arrows.
 - **Choose the home carousel photos:** press **★ Home carousel** on the ones you want.
 - **Choose a photo's size on the trip page:** normal, or large (two columns across).
@@ -25,7 +31,9 @@ What you can do in Studio:
 - **Edit the home page and About:** the top photo and its caption, headline, portrait, bio, roles, links, and the places on the map you haven't posted yet.
 - **Use a trip photo as the top photo:** press **Use as top photo** under it.
 - **Preview:** **Preview site** opens the real site as visitors will see it, running on your computer.
-- **Publish:** **Publish** lists what changed in plain words, checks that the site still builds, then sends it to the live site. It updates in a minute or two. If the check finds a problem (for example a mistyped month in a file edited by hand), nothing is sent and Studio says what to fix.
+- **Publish:** **Publish** lists what changed in plain words, checks that the site still builds, then sends it to the live site. It updates in a minute or two. If the check finds a problem (for example a mistyped month in a file edited by hand), nothing is sent and Studio says what to fix. After sending, Studio watches GitHub and tells you when the new version is live, or that the build failed and why.
+- **Stays in step with GitHub:** when Studio opens, and again before each publish, it fetches anything published from another computer or another copy of the project. If those changes clash with unpublished ones here, it leaves everything alone and says so.
+- **Quit Studio:** the link at the bottom of the left panel stops Studio and the site preview. Opening Studio while an older one is still running now replaces it.
 
 Good to know:
 
@@ -104,7 +112,7 @@ Open Studio.command            ← double-click to open Studio
 scripts/lib/                   ← photo and content handling shared by Studio and the tools
 scripts/add-trip.mjs           ← the photo import tool
 scripts/set-hero.mjs           ← sets the big photo at the top
-public/favicon.svg             ← the browser tab icon
+public/favicon.svg             ← the browser tab icon (apple-touch-icon.png is the one phones use on the home screen)
 ```
 
 ## Adding a new trip

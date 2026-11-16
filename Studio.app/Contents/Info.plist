@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Studio</string>
+  <key>CFBundleDisplayName</key><string>Studio</string>
+  <key>CFBundleIdentifier</key><string>io.github.sohtairong.studio</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleExecutable</key><string>Studio</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- Runs in the background with no Dock icon of its own while open; stop it with "Quit Studio" inside Studio. -->
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>
