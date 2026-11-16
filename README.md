@@ -13,6 +13,7 @@ What you can do in Studio:
 - **Add a trip:** press **+ New trip**, or drag a folder of photos anywhere onto the page. Type the country and month; the month is read from the first photo when it can be. iPhone HEIC photos are converted, every photo is resized, and all location data is removed.
 - **Add photos to a trip:** open the trip and drag photos or a folder onto the page. New photos are added in the order they were taken.
 - **Write titles and stories:** type in the boxes beside each photo. Changes save on their own a moment after you stop typing.
+- **See what still needs words:** a photo with no title or no story is marked, the trip shows how many are left, and the trip list shows “N to caption”. The markers clear as you type.
 - **Arrange photos:** drag a photo by its ⠿ handle, or use the ← → arrows.
 - **Choose the home carousel photos:** press **★ Home carousel** on the ones you want.
 - **Choose a photo's size on the trip page:** normal, or large (two columns across).
@@ -24,7 +25,7 @@ What you can do in Studio:
 - **Edit the home page and About:** the top photo and its caption, headline, portrait, bio, roles, links, and the places on the map you haven't posted yet.
 - **Use a trip photo as the top photo:** press **Use as top photo** under it.
 - **Preview:** **Preview site** opens the real site as visitors will see it, running on your computer.
-- **Publish:** **Publish** lists what changed in plain words, then sends it to the live site. It updates in a minute or two.
+- **Publish:** **Publish** lists what changed in plain words, checks that the site still builds, then sends it to the live site. It updates in a minute or two. If the check finds a problem (for example a mistyped month in a file edited by hand), nothing is sent and Studio says what to fix.
 
 Good to know:
 
@@ -209,7 +210,7 @@ If no hero photo is set, the site uses the first featured photo of your newest t
 - **Trip page tiles:** a trip page shows only the photos. Pointing at a photo (or tabbing to it) darkens it and shows its title, place and story. On phones and tablets, where there is no pointer, the title and place sit along the bottom of each photo and a tap opens the viewer with the full story.
 - **Teleport:** clicking a place on the map (or in the list beside it) zooms the map into that spot, shows the place name, then opens the trip. `ZOOM` and `DIVE_MS` at the end of `src/scripts/motion.ts` set how far and how long.
 - **Photo viewer:** on a trip page, click a photo to see it full-screen with its story. Use the arrow keys, the on-screen arrows or a swipe to move through the trip; Esc closes it. To zoom on a computer, click the photo (it zooms into the spot you clicked), scroll, pinch on a trackpad or press + and −; drag to look around and click again to zoom back out. On a phone, pinch or double-tap.
-- **Sharing one photo:** every photo has its own address (`/places/<trip>/<photo>/`), taken from its file name so it stays the same when you reorder or crop. While a photo is open the address bar shows it, and **Share** in the viewer copies it (or opens the share sheet on a phone). The link opens the trip with that photo showing, and its preview in messages is that photo.
+- **Sharing one photo:** every photo has its own address (`/places/<trip>/<photo>/`), taken from its file name so it stays the same when you reorder or crop. While a photo is open the address bar shows it, and **Share** in the viewer copies it (or opens the share sheet on a phone). The link opens the trip with that photo showing, and its preview in messages is that photo, shown whole (tall photos sit in the middle over a blurred copy of themselves, so nothing is cut off).
 - **Pausing the moving rows:** each row on the home page has a **Pause / Play** button. It stops or restarts all the rows, is remembered on that device, and while paused the rows can be swiped by hand.
 - **The lines at the top:** the large line comes into focus one word at a time and the smaller line slides in after it. As you scroll away, the two lines lift at different speeds and fade. The timings are at the end of the styles in `src/components/Intro.astro`.
 - **Arrival motion:** photos fade in as you scroll to them, and the top photo on the home page drifts slowly as you scroll away.
@@ -260,6 +261,10 @@ Red runs named **pages build and deployment** are something else: GitHub's older
 - **Settings > Pages > Source** on github.com is set to **GitHub Actions**.
 - The repository must be **public** on GitHub's free plan, so the photo files and trip text are visible there too.
 - The repository name matters. `sohtairong.github.io` puts the site at the top of the address, which the site's links expect. Renaming the repository, or your GitHub username, changes the address and breaks them until `site:` is updated to match.
+
+### Search engines
+
+The site publishes `/sitemap.xml` (the home page and every trip, updated on each publish) and `/robots.txt`. To ask Google to list the site sooner, add it in Google Search Console and submit `https://sohtairong.github.io/sitemap.xml`.
 
 ### Moving to your own domain later
 

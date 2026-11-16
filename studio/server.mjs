@@ -137,7 +137,7 @@ async function changes() {
       const label = trips.get(trip[1]) ? `${trips.get(trip[1])} (${trip[1].slice(0, 7)})` : `Trip ${trip[1]}`;
       if (trip[2].startsWith('photos/')) bump(label, kind === 'changed' ? 'other' : kind);
       else bump(label, 'text');
-    } else if (/^src\/content\/(about\.md|hero\.jpg|portrait\.jpg|cutout\.webp)$/.test(file)) bump('Home page and About', 'text');
+    } else if (/^src\/content\/(about\.md|hero\.jpg|portrait\.jpg)$/.test(file)) bump('Home page and About', 'text');
     else bump('Site design and settings', 'other');
   }
   const items = [...groups.values()].map((g) => {
@@ -158,6 +158,23 @@ function actionsUrl(remote) {
   return m ? `https://github.com/${m[1]}/${m[2]}/actions` : '';
 }
 
+/** Builds the site the way GitHub will, so a mistake is caught here and explained, not found later as a failed deploy. */
+async function checkBuild() {
+  const astro = path.join(ROOT, 'node_modules/astro/bin/astro.mjs');
+  const bin = (await exists(astro)) ? astro : path.join(ROOT, 'node_modules/.bin/astro');
+  const out = await run(process.execPath, [bin, 'build'], { timeout: 300000 });
+  if (out.ok) return;
+  // Keep the lines that say what is wrong; drop colour codes, timestamps and the program's own stack.
+  const lines = (out.stdout + '\n' + out.stderr).replace(/\x1b\[[0-9;]*m/g, '').split('\n')
+    .map((l) => l.replace(/^\d{2}:\d{2}:\d{2}\s*/, '').trimEnd())
+    .filter((l) => l.trim() && !/^\s*at\s|node_modules|^\[(build|vite|content|types)\]|Stack trace|^\s*Hint:$|docs\.astro\.build|Error reference:/.test(l));
+  const start = lines.findIndex((l) => /error/i.test(l));
+  const detail = lines.slice(start < 0 ? -10 : start, (start < 0 ? lines.length : start + 10)).join('\n');
+  const trip = /trips\/([a-z0-9-]+)\/|trips → ([a-z0-9-]+)/.exec(detail);
+  const where = trip ? `The problem is in the trip “${trip[1] || trip[2]}”. ` : '';
+  throw new Problem(`The site can’t be built as it is, so nothing was published and the live site is unchanged. ${where}Fix the problem below, then press Publish again.\n\n${detail || 'The build stopped without saying why. Run “npm run build” in Terminal to see more.'}`, 422);
+}
+
 async function publish(note) {
   const steps = [];
   const before = await changes();
@@ -165,6 +182,8 @@ async function publish(note) {
   if (!before.remote) throw new Problem('This project isn’t connected to GitHub yet. See “Publishing” in the README.');
 
   if (before.count > 0) {
+    await checkBuild();
+    steps.push('Checked that the site builds');
     const add = await run('git', ['add', '-A']);
     if (!add.ok) throw new Problem(`Couldn’t collect the changes.\n${add.stderr.trim()}`, 500);
     const summary = before.items.map((i) => `${i.label}: ${i.detail}`).join('; ');
@@ -344,7 +363,6 @@ async function api(req, res, url) {
       if (u.also && validFileName(u.also.file)) await restoreFromTrash(u.also.token, path.join(TRIPS, u.id, 'photos', u.also.file));
     }
     else if (u.kind === 'hero') await restoreFromTrash(u.token, path.join(CONTENT, 'hero.jpg'));
-    else if (u.kind === 'cutout') await restoreFromTrash(u.token, path.join(CONTENT, 'cutout.webp'));
     else throw new Problem('Nothing to undo.');
     return send(res, 200, { ok: true });
   }
@@ -365,24 +383,6 @@ async function api(req, res, url) {
     const about = await readAbout();
     await writeAbout({ ...about, hero: which === 'hero' ? 'hero.jpg' : about.hero });
     return send(res, 200, { about: await readAbout(), portraitShape: out.width >= out.height ? 'wide' : 'tall' });
-  }
-  // A cut-out of you (background removed) for the depth layout at the top of the home page.
-  if (is('POST', 'about', 'cutout')) {
-    const name = url.searchParams.get('name') || 'cutout.png';
-    let img, stats;
-    try { img = sharp(await readBody(req)).rotate(); stats = await img.clone().stats(); }
-    catch (e) { throw new Problem(`Couldn’t read “${name}”. Use a PNG picture with the background removed.\n(${e.message})`, 422); }
-    if (stats.isOpaque) throw new Problem('That picture still has its background. On a Mac: right-click the photo in Finder, choose Quick Actions > Remove Background, then use the new PNG it makes. On an iPhone: press and hold yourself in the photo, choose Share, and save it as an image.', 422);
-    const data = await img.trim().resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true }).webp({ quality: 90, alphaQuality: 95 }).toBuffer();
-    await fs.writeFile(path.join(CONTENT, 'cutout.webp'), data);
-    await writeAbout({ ...(await readAbout()), cutout: 'cutout.webp' });
-    return send(res, 200, { about: await readAbout() });
-  }
-  if (is('DELETE', 'about', 'cutout')) {
-    const from = path.join(CONTENT, 'cutout.webp');
-    const token = (await exists(from)) ? await trashPath(from, 'cutout.webp') : null;
-    await writeAbout({ ...(await readAbout()), cutout: '' });
-    return send(res, 200, { about: await readAbout(), undo: token ? { kind: 'cutout', token } : null });
   }
   if (is('POST', 'about', 'hero-from')) {
     const { trip, file } = await readJson(req);
@@ -428,7 +428,6 @@ async function serveMedia(res, url) {
   let file;
   if (parts[0] === 'trips' && parts.length === 3 && validTripId(parts[1]) && validFileName(parts[2])) file = path.join(TRIPS, parts[1], 'photos', parts[2]);
   else if (parts.length === 1 && (parts[0] === 'hero.jpg' || parts[0] === 'portrait.jpg')) file = path.join(CONTENT, parts[0]);
-  else if (parts.length === 1 && parts[0] === 'cutout.jpg') file = path.join(CONTENT, 'cutout.webp'); // previewed on grey
   if (!file || !(await exists(file))) throw new Problem('Not found', 404);
   const width = Math.min(2400, Math.max(80, Number(url.searchParams.get('w')) || 480));
   res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store' });

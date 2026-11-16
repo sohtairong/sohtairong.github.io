@@ -215,3 +215,7 @@ details.more[open] > summary { margin-bottom: 10px; }
   background: linear-gradient(160deg, #6b5a48 0%, #9a6a34 45%, #6a2f12 78%, #1d1a18 100%); }
 .font-preview .fp-big { line-height: 0.98; text-wrap: balance; }
 .font-preview .fp-small { justify-self: end; max-width: 16ch; text-align: right; line-height: 1.05; }
+
+/* photos that still need a title or story */
+.photo .missing { margin-top: 6px; justify-self: start; }
+.photo .missing[hidden] { display: none; }

@@ -158,10 +158,22 @@ function confirmBox({ title, text, yes, danger = false }) {
 
 // ---------------------------------------------------------------- sidebar + top bar
 
+// What a photo is missing: without a title or story its caption on the trip page is blank or thin.
+function missingText(p) {
+  const title = !p.title.trim(), story = !p.story.trim();
+  return title && story ? 'No title or story' : title ? 'No title' : story ? 'No story' : '';
+}
+const missingCount = (t) => t.photos.filter((p) => missingText(p)).length;
+function missingSummary(t) {
+  const n = missingCount(t);
+  return n ? `<span class="tag warn" id="missing-summary">${n} photo${n === 1 ? '' : 's'} without a title or story</span>` : '<span id="missing-summary"></span>';
+}
+
 function tripStatus(t) {
   if (t.broken) return '<span class="tag warn">Needs fixing</span>';
   if (!t.photos.length) return '<span class="tag warn">No photos yet</span>';
   if (t.draft) return '<span class="tag">Hidden</span>';
+  if (missingCount(t)) return `<span class="tag warn" title="Photos without a title or story">${missingCount(t)} to caption</span>`;
   return '';
 }
 
@@ -240,6 +252,7 @@ function photoCard(t, p, i) {
         <button class="icon-btn" type="button" data-act="later" title="Move later" aria-label="Move later" ${i === n - 1 ? 'disabled' : ''}>→</button>
       </div>
       <span class="num">${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}</span>
+      <span class="tag warn missing" ${missingText(p) ? '' : 'hidden'}>${missingText(p)}</span>
     </div>
     <div class="fields">
       <input class="title" type="text" data-p="title" value="${h(p.title)}" placeholder="Title" aria-label="Title of photo ${i + 1}">
@@ -269,7 +282,7 @@ function photosBlock(t) {
   const busy = upload && upload.id === t.id;
   return `
     <div class="photos-head">
-      <div><h2>Photos</h2><span class="muted">${t.photos.length ? `${t.photos.length} in this trip · ${featured || 'the first 6'} in the home carousel · drag ⠿ or use the arrows to reorder` : 'Add photos to put this trip on the site.'}</span></div>
+      <div><h2>Photos</h2><span class="muted">${t.photos.length ? `${t.photos.length} in this trip · ${featured || 'the first 6'} in the home carousel · drag ⠿ or use the arrows to reorder` : 'Add photos to put this trip on the site.'}</span> ${missingSummary(t)}</div>
       <div class="head-actions">
         <button class="btn small" type="button" data-act="pick-photos">Add photos…</button>
         <button class="btn small" type="button" data-act="pick-folder">Add a folder…</button>
@@ -625,8 +638,8 @@ function imageSlot({ which, has, label, emptyText, tall = false }) {
   return `<div class="image-slot">
     <div class="preview ${tall ? 'tall' : ''}" data-slot="${which}">${has ? `<img src="/media/${which}.jpg?w=640&t=${Date.now()}" alt="">` : h(emptyText)}</div>
     <div class="rows">
-      <div class="head-actions"><button class="btn small" type="button" data-act="pick-${which}">${has ? 'Replace…' : 'Choose a photo…'}</button>${(which === 'hero' || which === 'cutout') && has ? `<button class="btn small" type="button" data-act="remove-${which}">Remove</button>` : ''}</div>
-      <span class="help muted">Or drop a ${which === 'cutout' ? 'picture' : 'photo'} onto the picture. ${h(label)}</span>
+      <div class="head-actions"><button class="btn small" type="button" data-act="pick-${which}">${has ? 'Replace…' : 'Choose a photo…'}</button>${which === 'hero' && has ? '<button class="btn small" type="button" data-act="remove-hero">Remove</button>' : ''}</div>
+      <span class="help muted">Or drop a photo onto the picture. ${h(label)}</span>
     </div></div>`;
 }
 
@@ -721,7 +734,7 @@ async function setImage(which, file) {
   if (!file) return;
   if (!IMAGE.test(file.name)) { toast('That isn’t a photo Studio can use.', { bad: true }); return; }
   await flush();
-  toast(which === 'hero' ? 'Preparing the top photo…' : which === 'cutout' ? 'Preparing your cut-out…' : 'Preparing your portrait…', { ms: 2500 });
+  toast(which === 'hero' ? 'Preparing the top photo…' : 'Preparing your portrait…', { ms: 2500 });
   try {
     const r = await api('POST', `/api/about/${which}?name=${encodeURIComponent(file.name)}`, file, { raw: true });
     S.about = r.about;
@@ -760,7 +773,7 @@ async function publishDialog() {
   $('#publish-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = $('#p-go');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Publishing…';
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Checking and publishing…';
     try {
       const r = await api('POST', '/api/publish', { note: $('#p-note').value });
       openDialog(`<div class="inner"><h2>Sent ✓</h2><p class="muted" style="margin:0">The live site rebuilds itself now and updates in a minute or two. If you still see the old version after that, reload the page.</p>
@@ -813,6 +826,14 @@ main.addEventListener('input', (e) => {
   if (el.dataset.p && t) {
     const i = Number(el.closest('.photo').dataset.i);
     t.photos[i][el.dataset.p] = el.value;
+    if (el.dataset.p === 'title' || el.dataset.p === 'story') {
+      // Keep the "missing" markers in step while typing.
+      const tag = $('.missing', el.closest('.photo'));
+      if (tag) { tag.textContent = missingText(t.photos[i]); tag.hidden = !tag.textContent; }
+      const sum = $('#missing-summary');
+      if (sum) sum.outerHTML = missingSummary(t);
+      renderSide();
+    }
     return touch(t.id);
   }
   if (el.dataset.a) { S.about[el.dataset.a] = el.value; if (['headline', 'headlineFont', 'lineFont'].includes(el.dataset.a)) renderFontPreview(); if (el.dataset.a === 'name') $('#brand-name').textContent = el.value ? ` · ${el.value}` : ''; return touch('about'); }
@@ -848,17 +869,7 @@ main.addEventListener('click', async (e) => {
     if (act === 'pick-folder') return addPhotos(t, await pickFiles({ folder: true }));
     if (act === 'delete-trip') return deleteTrip(t);
   }
-  if (act === 'pick-hero' || act === 'pick-portrait' || act === 'pick-cutout') return setImage(act.slice(5), (await pickFiles())[0]);
-  if (act === 'remove-cutout') {
-    await flush();
-    try {
-      const r = await api('DELETE', '/api/about/cutout'); S.about = r.about; renderSite(); refreshChanges();
-      toast('Removed. Your portrait is used instead.', r.undo && { action: 'Undo', onAction: async () => {
-        try { await api('POST', '/api/undo', r.undo); S.about.cutout = 'cutout.webp'; await save('about'); await load({ kind: 'site' }); } catch (err) { toast(err.message, { bad: true }); }
-      } });
-    } catch (err) { toast(err.message, { bad: true }); }
-    return;
-  }
+  if (act === 'pick-hero' || act === 'pick-portrait') return setImage(act.slice(5), (await pickFiles())[0]);
   if (act === 'remove-hero') {
     await flush();
     try {

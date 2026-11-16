@@ -18,7 +18,8 @@ const place = `${trip.data.country}, ${dateLabel(trip)}`;
   description={open
     ? (open.story || `A photograph from ${[open.city, place].filter(Boolean).join(', ')}.`)
     : `${trip.data.photos.length} photographs from ${place}, with the stories behind them.`}
-  image={open ? open.src : featuredOf(trip)[0]?.src}
+  image={featuredOf(trip)[0]?.src}
+  shareImage={open ? `/share/${trip.id}/${open.key}.jpg` : undefined}
 >
   <TripHero trip={trip} index={index} total={total} />
   <PhotoGrid trip={trip} />

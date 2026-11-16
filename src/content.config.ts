@@ -61,9 +61,6 @@ const about = defineCollection({
       // Small credit line on the hero photo, e.g. "Kyoto, March 2025".
       heroCaption: z.string().optional(),
       portrait: image().optional(),
-      // A picture of you with the background removed (transparent). When set, the top of the home page
-      // uses the depth layout: big words behind you, more words in front.
-      cutout: image().optional(),
       portraitCaption: z.string().optional(),
       email: z.string().optional(),
       instagram: z.string().url().optional(),

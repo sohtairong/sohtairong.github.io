@@ -32,6 +32,16 @@ function fileNames(trip: Trip): string[] {
 }
 
 // File names exported from Photos are long codes (0a366f0c-30a5-41d6-…); their first eight characters are enough.
+/** Where each of a trip's photo files is on disk, in order (used to make the link-preview pictures). */
+export function photoFiles(trip: Trip): string[] {
+  try {
+    const file = path.resolve(trip.filePath ?? `src/content/trips/${trip.id}/index.md`);
+    const head = /^---\r?\n([\s\S]*?)\r?\n---/.exec(fs.readFileSync(file, 'utf8'))?.[1] ?? '';
+    const photos = (YAML.parse(head)?.photos ?? []) as { src?: string }[];
+    return photos.map((p) => path.resolve(path.dirname(file), String(p.src ?? '')));
+  } catch { return []; }
+}
+
 const slug = (s: string) => {
   const clean = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(clean) ? clean.slice(0, 8) : clean;

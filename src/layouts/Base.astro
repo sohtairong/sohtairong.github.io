@@ -14,19 +14,23 @@ interface Props {
   header?: boolean;
   /** Photo shown when the page's link is shared. Defaults to the home-page hero photo. */
   image?: ImageMetadata;
+  /** A ready-made preview picture (a site path) to use instead of cropping `image`. */
+  shareImage?: string;
 }
 const about = await getEntry('about', 'about');
 const name = about?.data.name ?? 'Tai Rong';
-const { header = true, title, image, description = 'Travel photographs by ' + name + ', sorted by place.' } = Astro.props;
+const { header = true, title, image, shareImage, description = 'Travel photographs by ' + name + ', sorted by place.' } = Astro.props;
 const pageTitle = title ? `${title} · ${name}` : name;
 
 // Link preview (the card shown when the page is shared on LinkedIn, WhatsApp, Telegram…).
 // Uses the page's own photo, else the hero photo, else the newest trip's first featured photo.
 const newest = (await getTrips())[0];
 const shareSrc = image ?? about?.data.hero ?? (newest ? featuredOf(newest)[0]?.src : undefined);
-const share = shareSrc
-  ? await getImage({ src: shareSrc, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 82 })
-  : undefined;
+const share = shareImage
+  ? { src: shareImage }
+  : shareSrc
+    ? await getImage({ src: shareSrc, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 82 })
+    : undefined;
 const abs = (path: string) => (Astro.site ? new URL(path, Astro.site).href : path);
 const canonical = abs(Astro.url.pathname);
 ---
