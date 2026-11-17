@@ -100,7 +100,7 @@ photos:
     featured: true
   - src: "./photos/e0ec58fe-8a0e-41ad-8bed-a4234138dfb4-1-105-c.jpg"
     title: "Hey Bergen"
-    story: "Not a single building in sight. What a view to behold."
+    story: "Nothing but blue and green. That's the typical Norwegian hike."
     city: "Bergen"
     featured: false
   - src: "./photos/e45f49cb-bc6b-4aff-975a-f6c621b22780-1-102-a.jpg"
@@ -123,7 +123,7 @@ photos:
     featured: false
   - src: "./photos/3d6d351d-8c24-4326-abf2-bc41735ab447-1-102-a.jpg"
     title: "That's Geiranger"
-    story: "The hike that took 8 hours in total. Was it worth it? you tell me."
+    story: "We sat by the cliff (safely, of course), then enjoyed the sight of gushing waterfalls and shimmering riverbanks. Nothing felt more peaceful then and there; with birds singing and trees whispering, it felt like a good-job pat on the back from God."
     city: "Bergen"
     featured: false
   - src: "./photos/ddeab982-9768-454e-b6d6-9c9dc621192c-1-102-o.jpg"
@@ -132,7 +132,7 @@ photos:
     featured: false
   - src: "./photos/edeb7f1c-3ee8-4815-9a82-1ca9adea82bd-1-201-a.jpg"
     title: "Our whip for the trip"
-    story: ""
+    story: "A trusty EV that gave us no problem! Good job, Toyota!"
     city: "Bergen"
     featured: false
   - src: "./photos/30d8ee3e-ee3d-4b37-970c-31f6c80e4536-1-105-c.jpg"
