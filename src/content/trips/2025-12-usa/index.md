@@ -71,7 +71,7 @@ photos:
     featured: false
   - src: "./photos/13848111-47cc-433d-97c1-835ee084690c-1-105-c-crop.jpg"
     original: "./photos/13848111-47cc-433d-97c1-835ee084690c-1-105-c.jpg"
-    title: "A stay at the attic"
+    title: "A stay in the attic"
     story: "Our Airbnb at Syracus, though short, was memorable. The place was big and was a historical piece."
     city: "Syracuse"
     featured: false
@@ -178,7 +178,7 @@ photos:
     story: ""
     featured: false
   - src: "./photos/f0eac951-9110-4265-9489-55d25f0371e7-1-105-c.jpg"
-    title: "Where something significant once stood."
+    title: "Where something significant once stood"
     story: "Rest in Peace to those who have fallen in the 911 attack. One regret I have is not visiting the 911 museum while I was there."
     city: "New York"
     featured: false
@@ -187,8 +187,8 @@ photos:
     story: ""
     featured: false
   - src: "./photos/da684315-a0a4-4c91-89ad-868c43a04902-1-105-c.jpg"
-    title: "Winter with you is my favourite"
-    story: "Though you don't really lke the cold..."
+    title: "She likes spring, I prefer winter"
+    story: "Did you know that's both a song and a fact?"
     city: "New York"
     featured: false
   - src: "./photos/e7a2e4fd-2019-4571-9c78-4417c81dc995-1-105-c-crop.jpg"
